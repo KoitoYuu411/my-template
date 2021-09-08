@@ -1,13 +1,21 @@
 #include <bits/stdc++.h>
-using namespace std;
 
 #define debug(...) cout << #__VA_ARGS__ << "\n" << (__VA_ARGS__) << endl;
 #define all(...) begin(__VA_ARGS__), end(__VA_ARGS__)
+
 #define FWD(...) static_cast<decltype(__VA_ARGS__)&&>(__VA_ARGS__)
+#define concept inline constexpr bool
 
-inline constexpr size_t vector_size_v = 2;
 
-namespace std {template<class> inline constexpr bool is_vector_v = false;template<class T> inline constexpr bool is_vector_v<vector<T>> = true;template<class T>struct tuple_size<vector<T>> : integral_constant<size_t, vector_size_v> {};template<size_t I, class T>struct tuple_element<I, vector<T>> : enable_if<true, T> {};template<size_t I, class T, enable_if_t<is_vector_v<decay_t<T>>, int> = 0>decltype(auto) get(T&& t) { return static_cast<T&&>(t)[I]; }}
+inline constexpr size_t vector_size_v = 3;
+namespace std {
+template<class> concept is_vector_v = false; template<class T> concept is_vector_v<vector<T>> = true;
+template<class T> struct tuple_size<vector<T>> : integral_constant<size_t, vector_size_v> {};
+template<size_t I, class T>struct tuple_element<I, vector<T>> : enable_if<true, T> {};
+template<size_t I, class T, enable_if_t<is_vector_v<decay_t<T>>, int> = 0>
+decltype(auto) get(T&& t) { return static_cast<T&&>(t)[I]; }
+} // namespace std
+
 template<int N>
 constexpr auto SieveOfEuler_() {
     array<int, N + 1> prime {};
@@ -27,23 +35,22 @@ constexpr auto SieveOfEuler_() {
 };
 
 inline namespace my {
+using namespace std;
 using ll = long long int;
 using ull = unsigned long long int;
     
-
 inline namespace type_traits {
 
 template<class T> struct type_identity { using type = T; };
 template<class T> using type_identity_t = typename type_identity<T>::type;
     
 template<class T, class... Args>
-inline constexpr bool is_any_of = ( is_same_v<T, Args> || ... );
+concept is_any_of = ( is_same_v<T, Args> || ... );
 
-template<class T, class = void> inline constexpr bool is_tuple_like = false;
+template<class T, class = void> concept is_tuple_like = false;
 
-template<class T> inline constexpr bool 
-    is_tuple_like<T, void_t<decltype(tuple_size<T> {})>> = true;
-template<class T> inline constexpr bool tuple_like = is_tuple_like<remove_reference_t<T>>;    
+template<class T> concept is_tuple_like<T, void_t<decltype(tuple_size<T> {})>> = true;
+template<class T> concept tuple_like = is_tuple_like<remove_reference_t<T>>;    
 
 }
 
@@ -60,34 +67,52 @@ struct proj_cmp {
     { return invoke(comp, invoke(proj, (T&&)t), invoke(proj, (U&&)u)); }
 };
 template<class C, class P> proj_cmp(C, P)->proj_cmp<C, P>;
+
 }
 
-namespace ranges {
+inline namespace ITER {
+    template<class T> using iter_difference_t = ptrdiff_t;// [[todo]]
+    template<class I> using iter_value_t = typename iterator_traits<I>::value_type;
+    template<class T> using iter_reference_t = decltype(*declval<T>());
+    template<class T> using iter_rvalue_reference_t = iter_reference_t<T>; // [[todo]] = decltype(ranges::iter_move(declval<T&>()));
+
+    //[unreachable.sentinel]
+    struct unreachable_sentinel_t { //[[todo] : I is weakly_incrementable]
+        template<class I> friend constexpr bool operator==(I, unreachable_sentinel_t) { return false; }
+        template<class I> friend constexpr bool operator!=(I, unreachable_sentinel_t) { return true; }
+        template<class I> friend constexpr bool operator==(unreachable_sentinel_t, I) { return false; }
+        template<class I> friend constexpr bool operator!=(unreachable_sentinel_t, I) { return true; } 
+    };
+    inline constexpr unreachable_sentinel_t unreachable_sentinel {};
     
+} // namespace ITER
+namespace ranges {
+//[ranges.range] concepts
+template<class T, class = void> concept range = false;
+template<class T> concept range<T, void_t<decltype(begin(declval<T&>()), end(declval<T&>()))>> = true;
+    //[[todo] borrowed_range enable_borrowed_range]
 template<class T> using iterator_t = decay_t<decltype(begin(declval<T&>()))>;
 template<class T> using sentinel_t = decay_t<decltype(end(declval<T&>()))>;
-template<class T,class = void> inline constexpr bool range = false;
-template<class T> inline constexpr bool range<T, void_t<iterator_t<T>, sentinel_t<T>>> = true;
-template<class I> using iter_value_t = typename iterator_traits<I>::value_type;
-template<class T> using iter_reference_t = decltype(*declval<T>());
+
+template<class R> using range_size_t = decltype(/*ranges::*/size(declval<R&>()));
+template<class R> using range_difference_t = iter_difference_t<iterator_t<R>>;
 template<class R> using range_value_t = iter_value_t<iterator_t<R>>;
 template<class R> using range_reference_t = iter_reference_t<iterator_t<R>>;
-    
-inline struct unreachable_sentinel_t {} unreachable_sentinel;
-template<class I> constexpr bool operator==(I, unreachable_sentinel_t) { return false; }
-template<class I> constexpr bool operator!=(I, unreachable_sentinel_t) { return true; }
-template<class I> constexpr bool operator==(unreachable_sentinel_t, I) { return false; }
-template<class I> constexpr bool operator!=(unreachable_sentinel_t, I) { return true; }
+template<class R> using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
+
+//[range.sized]
+template<class T, class=void> concept sized_range = false;
+template<class R> concept sized_range<R, void_t<decltype(/*ranges::*/size(declval<R&>()))>> = range<R>;
+
+
 
 template <class W, class B = unreachable_sentinel_t> class iota_view {
-private:
     struct S;
     struct I {
-    public:
-        using iterator_category = random_access_iterator_tag;
+        using iterator_category = random_access_iterator_tag; // [[todo : input_iterator_tag]]
         using value_type = W;
         using difference_type = make_signed_t<decltype(W() - W())>;
-        using pointer = W*;
+        using pointer = void;
         using reference = W;
 
         I() = default;
@@ -99,48 +124,32 @@ private:
         constexpr I& operator--() { --v; return *this; }
         constexpr I operator--(int) { auto t = *this; --*this; return t; }
         constexpr I& operator+=(difference_type n) {
-            if constexpr (is_unsigned_v<W>) {
-                if (n >= difference_type(0))
-                    v += static_cast<W>(n);
-                else
-                    v -= static_cast<W>(-n);
-            } else
+            if constexpr (is_unsigned_v<W>)
+                n >= difference_type(0) ? v += static_cast<W>(n) : v -= static_cast<W>(-n);
+            else
                 v += n;
             return *this;
         }
         constexpr I& operator-=(difference_type n) {
-            if constexpr (is_unsigned_v<W>) {
-                if (n >= difference_type(0))
-                    v -= static_cast<W>(n);
-                else
-                    v += static_cast<W>(-n);
-            } else
+            if constexpr (is_unsigned_v<W>)
+                n >= difference_type(0) ? v -= static_cast<W>(n) : v += static_cast<W>(-n);
+            else
                 v -= n;
             return *this;
         }
-        constexpr W operator[](difference_type n) {
-            return W(v + n);
-        }
-        friend constexpr bool operator==(const I& x, const I& y){ return x.v == y.v; }
-        friend constexpr bool
-        operator!=(const I& x, const I& y){ return x.v != y.v; }
-        friend constexpr bool
-        operator<(const I& x, const I& y) { return x.v < y.v; }
-        friend constexpr bool
-        operator>(const I& x, const I& y) { return y < x; }
-        friend constexpr bool
-        operator<=(const I& x, const I& y)  { return !(y < x); }
-        friend constexpr bool
-        operator>=(const I& x, const I& y) { return !(x < y); }
+        constexpr W operator[](difference_type n) { return W(v + n); }
 
-        friend constexpr I
-        operator+(I i, difference_type n) { return i += n; }
-        friend constexpr I
-        operator+(difference_type n, I i) { return i += n; }
-        friend constexpr I
-        operator-(I i, difference_type n) {return i -= n; }
-        friend constexpr difference_type
-        operator-(const I& x, const I& y) {
+        friend constexpr bool operator==(const I& x, const I& y) { return x.v == y.v; }
+        friend constexpr bool operator!=(const I& x, const I& y) { return x.v != y.v; }
+        friend constexpr bool operator< (const I& x, const I& y) { return x.v <  y.v; }
+        friend constexpr bool operator> (const I& x, const I& y) { return   y < x ; }
+        friend constexpr bool operator<=(const I& x, const I& y) { return !(y < x); }
+        friend constexpr bool operator>=(const I& x, const I& y) { return !(x < y); }
+
+        friend constexpr I operator+(I i, difference_type n) { return i += n; }
+        friend constexpr I operator+(difference_type n, I i) { return i += n; }
+        friend constexpr I operator-(I i, difference_type n) { return i -= n; }
+        friend constexpr difference_type operator-(const I& x, const I& y) {
             using D = difference_type;
             if constexpr (is_integral_v<W>) {
                 if constexpr (is_signed_v<W>)
@@ -150,27 +159,23 @@ private:
             } else
                 return x.v - y.v;
         }
-    private : 
-        W v = {};
+    private: 
+        W v;
         friend S;
     };
     struct S {
     private:
-        constexpr bool _M_equal(const I& x) const {
-            return x.v == b;
-        }
-        B b = {};
+        constexpr bool _M_equal(const I& x) const { return x.v == b; }
+        B b;
     public:
         S() = default;
         constexpr explicit S(B b) : b(b) {}
         friend constexpr bool operator==(const I& x, const S& y) { return y._M_equal(x); }
-        friend constexpr typename I::difference_type
-        operator-(const I& x, const S& y) { return x.v - y.b; }
-        friend constexpr typename I::difference_type
-        operator-(const S& x, const I& y) { return -(y - x); }
+        friend constexpr typename I::difference_type operator-(const I& x, const S& y) { return x.v - y.b; }
+        friend constexpr typename I::difference_type operator-(const S& x, const I& y) { return -(y - x); }
     };
-    W v = W();
-    B b = B();
+    W v;
+    B b;
 public:
     iota_view() = default;
     constexpr explicit iota_view(W v) : v(v) {}
@@ -179,12 +184,10 @@ public:
     constexpr auto end() const {
         if constexpr (is_same_v<W, B>)
             return I { b };
-        else {
-            if constexpr (is_same_v<B, unreachable_sentinel_t>)
-                return unreachable_sentinel;
-            else
-                return S{b};    
-        }
+        else if constexpr (is_same_v<B, unreachable_sentinel_t>)
+            return unreachable_sentinel;
+        else
+            return S { b };    
     }
     constexpr auto size() const {
         if constexpr (is_integral_v<W> && is_integral_v<B>)
@@ -199,13 +202,10 @@ template <class W, class B> iota_view(W, B) ->iota_view<W, B>;
     
 namespace views {
 struct iota_fn {
-    template <class T> constexpr auto operator()(T&& e) const 
-    { return iota_view { static_cast<T&&>(e) }; }
-    template <class T, class U> constexpr auto operator()(T&& e, U&& f) const 
-    { return iota_view { static_cast<T&&>(e), static_cast<U&&>(f) }; }
+    template <class T> constexpr auto operator()(T&& e) const { return iota_view { FWD(e) }; }
+    template <class T, class U> constexpr auto operator()(T&& e, U&& f) const { return iota_view { FWD(e), FWD(f) }; }
 };
-inline constexpr iota_fn iota;  
-
+inline constexpr iota_fn iota;
 }
 
 namespace views {
@@ -243,15 +243,10 @@ struct enumerate_fn {
     template<class R, enable_if_t<ranges::range<R>, int> =0> 
     decltype(auto) constexpr operator()(R&& r) const { return zip(iota(0), (R&&)r); }
     template<class R, enable_if_t<ranges::range<R>, int> =0> 
-    friend constexpr decltype(auto) operator|(R&& r, enumerate_fn adp) { return adp(FWD(r)); }
+    friend constexpr decltype(auto) operator|(R&& r, enumerate_fn f) { return f(FWD(r)); }
 };
 inline constexpr enumerate_fn enumerate {};
 }
-}
-inline namespace simplify {
-    inline constexpr ranges::views::iota_fn range {};
-    inline constexpr ranges::views::zip_fn zp {};
-    inline constexpr ranges::views::enumerate_fn en {};
 }
     
 inline namespace print {
@@ -322,15 +317,14 @@ template<class R, class T = void>
 using printable_range = enable_if_t<ranges::range<R> && !is_tuple_like<R> &&
     !is_any_of<ranges::range_value_t<R>, char, wchar_t, char16_t, char32_t>, T>;
 
-template<class, class = void> inline constexpr bool has_del_impl = false;
-template<class T>
-inline constexpr bool has_del_impl<T, void_t<decltype(declval<T&>().del)>> = true;
-template<class T> inline constexpr bool has_del = has_del_impl<remove_reference_t<T>>;
-    
-template<class, class = void> inline constexpr bool has_bra_impl = false;
-template<class T> 
-inline constexpr bool has_bra_impl<T, void_t<decltype(declval<T&>().bra)>> = true;
-template<class T> inline constexpr bool has_bra = has_bra_impl<remove_reference_t<T>>;
+namespace print_detail {
+template<class, class = void> concept has_del_impl = false;
+template<class T> concept has_del_impl<T, void_t<decltype(declval<T&>().del)>> = true;
+template<class T> concept has_del = has_del_impl<remove_reference_t<T>>;
+template<class, class = void> concept has_bra_impl = false;
+template<class T> concept has_bra_impl<T, void_t<decltype(declval<T&>().bra)>> = true;
+template<class T> concept has_bra = has_bra_impl<remove_reference_t<T>>;
+}
 template<class STRM, class T> struct RAII_brackets {
     STRM& os;
     T data;
@@ -397,13 +391,13 @@ template<class Ch, class Tr, template<class...> class W, class R, class... Rest,
 basic_ostream<Ch, Tr>& operator<<(basic_ostream<Ch, Tr>& os, W<R, Rest...> w) {
     using WW = W<R, Rest...>;
     auto del = [&] {
-        if constexpr (has_del<WW>)
+        if constexpr (print_detail::has_del<WW>)
             return w.del;
         else
             return default_delim;
     };
     auto bra = [&] {
-        if constexpr (has_bra<WW>)
+        if constexpr (print_detail::has_bra<WW>)
             return w.bra;
         else
             return default_brackets;
@@ -416,13 +410,13 @@ template<class Ch, class Tr, template<class...> class W, class Tp, class... Rest
 basic_ostream<Ch, Tr>& operator<<(basic_ostream<Ch, Tr>& os, W<Tp, Rest...> w) {
     using WW = W<Tp, Rest...>;
     auto del = [&] {
-        if constexpr (has_del<WW>)
+        if constexpr (print_detail::has_del<WW>)
             return w.del;
         else
             return default_delim;
     };
     auto bra = [&] {
-        if constexpr (has_bra<WW>)
+        if constexpr (print_detail::has_bra<WW>)
             return w.bra;
         else
             return default_brackets;
@@ -433,28 +427,6 @@ basic_ostream<Ch, Tr>& operator<<(basic_ostream<Ch, Tr>& os, W<Tp, Rest...> w) {
 }
 
 }
-template<class T = int>
-inline T read() {
-    T x = 0, w = 1;
-    char c = getchar();
-    while (c < '0' || c > '9') {
-        if (c == '-') w = -1;
-        c = getchar();
-    }
-    while (c <= '9' && c >= '0') {
-        x = (x << 1) + (x << 3) + c - '0';
-        c = getchar();
-    }
-    return w == 1 ? x : -x;
-}
-
-auto static fastIO = [] { 
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr); 
-    cout.tie(nullptr); 
-    cout << setprecision(12);
-    return 0;
-}();
 
 inline namespace safe {
     
@@ -578,77 +550,48 @@ inline namespace md {
         L v;
         constexpr B(L x = 0) : v(x % M) {}
         template <class... T> using Q = enable_if_t<(is_integral_v<T> && ...), B>;
-        template <class I, class = Q<I>>
-        constexpr operator I() const { return I(v); }
-        constexpr B &operator+=(B r) {
-            v = (v + r.v) % M;
-            return *this;
-        }
-        constexpr B &operator-=(B r) {
-            v = ((v - r.v) % M + M) % M;
-            return *this;
-        }
-        constexpr B &operator*=(B r) {
-            v = (v * r.v) % M;
-            return *this;
-        }
-        constexpr B &operator/=(B r) {
-            *this *= r.inv();
-            return *this;
-        }
+        template <class I, class = Q<I>> constexpr operator I() const { return I(v); }
+        constexpr B &operator+=(B r) { v = (v + r.v) % M;return *this; }
+        constexpr B &operator-=(B r) { v = ((v - r.v) % M + M) % M; return *this; }
+        constexpr B &operator*=(B r) { v = (v * r.v) % M; return *this; }
+        constexpr B &operator/=(B r) { *this *= r.inv(); return *this; }
         friend constexpr B operator+(B l, B r) { return l += r; }
         friend constexpr B operator-(B l, B r) { return l -= r; }
         friend constexpr B operator*(B l, B r) { return l *= r; }
         friend constexpr B operator/(B l, B r) { return l /= r; }
-        template <class I>
-        Q<I> friend constexpr operator+(I l, B r) { return (B)l += r; }
-        template <class I>
-        Q<I> friend constexpr operator-(I l, B r) { return (B)l -= r; }
-        template <class I>
-        Q<I> friend constexpr operator*(I l, B r) { return (B)l *= r; }
-        template <class I>
-        Q<I> friend constexpr operator/(I l, B r) { return (B)l /= r; }
-        template <class I>
-        Q<I> friend constexpr operator+(B l, I r) { return l += r; }
-        template <class I>
-        Q<I> friend constexpr operator-(B l, I r) { return l -= r; }
-        template <class I>
-        Q<I> friend constexpr operator*(B l, I r) { return l *= r; }
-        template <class I>
-        Q<I> friend constexpr operator/(B l, I r) { return l /= r; }
+        template <class I> Q<I> friend constexpr operator+(I l, B r) { return (B)l += r; }
+        template <class I> Q<I> friend constexpr operator-(I l, B r) { return (B)l -= r; }
+        template <class I> Q<I> friend constexpr operator*(I l, B r) { return (B)l *= r; }
+        template <class I> Q<I> friend constexpr operator/(I l, B r) { return (B)l /= r; }
+        template <class I> Q<I> friend constexpr operator+(B l, I r) { return l += r; }
+        template <class I> Q<I> friend constexpr operator-(B l, I r) { return l -= r; }
+        template <class I> Q<I> friend constexpr operator*(B l, I r) { return l *= r; }
+        template <class I> Q<I> friend constexpr operator/(B l, I r) { return l /= r; }
         constexpr B operator+() const { return *this; }
         constexpr B operator-() const { return 0 - *this; }
         friend constexpr B inv(B x) { return x.inv(); }
-        template <class I>
-        Q<I> friend constexpr pow(B l, I r) { return l.pow(r); }
+        template <class I> Q<I> friend constexpr pow(B l, I r) { return l.pow(r); }
         constexpr B inv() const { return pow(M - 2); }
-        template <class I>
-        Q<I> constexpr pow(I r) const {
+        template <class I> Q<I> constexpr pow(I r) const {
             B b = *this, x = 1;
             while (r) {
-                if (r & 1)
-                    x *= b;
+                if (r & 1) x *= b;
                 b *= b;
                 r /= 2;
             }
             return x;
         }
-        template <class L, class R>
-        Q<L, R> static constexpr pow(L l, R r) { return B(l).pow(r); }
-        template <class I>
-        Q<I> static fac(I r) {
+        template <class L, class R> Q<L, R> static constexpr pow(L l, R r) { return B(l).pow(r); }
+        template <class I> Q<I> static fac(I r) {
             static unordered_map<I, B> f{{0, 1}};
-            if (auto i = f.find(r); i != end(f))
-                return i->second;
+            if (auto i = f.find(r); i != end(f)) return i->second;
             return f[r] = r * fac(r - 1);
         }
-        template <class I>
-        Q<I> static comb(I x, I y) { return fac(x) / fac(y) / fac(x - y); }
+        template <class I> Q<I> static comb(I x, I y) { return fac(x) / fac(y) / fac(x - y); }
         constexpr B &operator++() { return *this += 1; }
         constexpr B &operator--() { return *this -= 1; }
     };
-    template <auto M> using basic_mod = B<M>;
-    using mod = B<>;
+    template <auto M> using basic_mod = B<M>;  using mod = B<>;
     inline constexpr mod operator""_m(unsigned long long x) { return mod(x); }
 }
 
@@ -679,14 +622,10 @@ public:
 };
 }
 
-static inline auto pmr_set = [] {
-    static byte buffer [1 << 30];
-    static auto pool = pmr::monotonic_buffer_resource { data(buffer), size(buffer) };
-    set_default_resource(&pool);
-    return 0;
-}();
+inline namespace utility {
 
-inline namespace lam {
+inline namespace lambda {
+
 template<class Fun> 
 class Y_combinator {     
 	Fun fun_; 
@@ -696,6 +635,43 @@ public:
   	{ return fun_(*this, (Args&&)args...); }
 };
 template< class T > Y_combinator(T) -> Y_combinator<T>;
-}
+} // namespace lambda
+inline namespace Hash {
+constexpr inline auto bit_view = [](auto&& t) {
+    return string_view { reinterpret_cast<char const*>(addressof(t)), sizeof(t) };
+};
+struct bit_hash {
+    template<class T>
+    size_t operator() (T&& t) const { return hash<string_view> {} (bit_view(t)); }
+};
+struct bit_equal {
+    template<class T, class U>
+    bool operator() (T&& t, U&& u) const { return bit_view(t) == bit_view(u); }
+};
+} // namespace Hash
+} // namespace utility
 
-}
+inline namespace init {
+
+inline constexpr auto set_pmr = [] {
+    static byte buffer [1 << 30];
+    static auto pool = pmr::monotonic_buffer_resource { data(buffer), size(buffer) };
+    set_default_resource(&pool);
+    return 0;
+};
+
+inline constexpr auto set_fast_io = [] { 
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr); 
+    cout.tie(nullptr); 
+    cout << setprecision(12);
+    return 0;
+};
+
+} // namespace init
+} // namespace my
+inline namespace simplify {
+    inline constexpr ranges::views::iota_fn range {};
+    inline constexpr ranges::views::zip_fn zp {};
+    inline constexpr ranges::views::enumerate_fn en {};
+} // namespace simplify
