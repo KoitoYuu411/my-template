@@ -5,9 +5,10 @@
 
 #define FWD(...) static_cast<decltype(__VA_ARGS__)&&>(__VA_ARGS__)
 #define concept inline constexpr bool
+#define INLINE_BOOL inline constexpr bool
 
 
-inline constexpr size_t vector_size_v = 3;
+inline constexpr size_t vector_size_v = 2;
 namespace std {
 template<class> concept is_vector_v = false; template<class T> concept is_vector_v<vector<T>> = true;
 template<class T> struct tuple_size<vector<T>> : integral_constant<size_t, vector_size_v> {};
@@ -47,13 +48,20 @@ template<class T> using type_identity_t = typename type_identity<T>::type;
 template<class T, class... Args>
 concept is_any_of = ( is_same_v<T, Args> || ... );
 
-template<class T, class = void> concept is_tuple_like = false;
+template<class T, class = void> INLINE_BOOL is_tuple_like = false;
 
-template<class T> concept is_tuple_like<T, void_t<decltype(tuple_size<T> {})>> = true;
+template<class T> INLINE_BOOL is_tuple_like<T, void_t<decltype(tuple_size<T> {})>> = true;
 template<class T> concept tuple_like = is_tuple_like<remove_reference_t<T>>;    
 
 }
-
+inline namespace concepts {
+    template<class T, class U> concept derived_from = is_base_of_v<U, T>;
+    template<class T> concept movable = is_convertible_v<T, T>;//[[not precisely]]
+}
+inline namespace integer {
+template<class T> constexpr make_unsigned_t<T> to_unsigned(T t) noexcept { return t; }
+template<class T> constexpr make_signed_t<T> to_signed(T t) noexcept { return t; }
+}
 inline namespace algo {
 
 struct identity { template<class T> T&& operator()(T&& t) const { return (T&&)t; }  };
@@ -76,6 +84,10 @@ inline namespace ITER {
     template<class T> using iter_reference_t = decltype(*declval<T>());
     template<class T> using iter_rvalue_reference_t = iter_reference_t<T>; // [[todo]] = decltype(ranges::iter_move(declval<T&>()));
 
+    //[default.sentinel]
+    struct default_sentinel_t {};
+    inline constexpr default_sentinel_t default_sentinel {};
+
     //[unreachable.sentinel]
     struct unreachable_sentinel_t { //[[todo] : I is weakly_incrementable]
         template<class I> friend constexpr bool operator==(I, unreachable_sentinel_t) { return false; }
@@ -88,8 +100,9 @@ inline namespace ITER {
 } // namespace ITER
 namespace ranges {
 //[ranges.range] concepts
-template<class T, class = void> concept range = false;
-template<class T> concept range<T, void_t<decltype(begin(declval<T&>()), end(declval<T&>()))>> = true;
+template<class T, class = void> INLINE_BOOL range_impl = false;
+template<class T> INLINE_BOOL range_impl<T, void_t<decltype(begin(declval<T&>()), end(declval<T&>()))>> = true;
+template<class T> concept range = range_impl<T>;
     //[[todo] borrowed_range enable_borrowed_range]
 template<class T> using iterator_t = decay_t<decltype(begin(declval<T&>()))>;
 template<class T> using sentinel_t = decay_t<decltype(end(declval<T&>()))>;
@@ -100,12 +113,23 @@ template<class R> using range_value_t = iter_value_t<iterator_t<R>>;
 template<class R> using range_reference_t = iter_reference_t<iterator_t<R>>;
 template<class R> using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
-//[range.sized]
-template<class T, class=void> concept sized_range = false;
-template<class R> concept sized_range<R, void_t<decltype(/*ranges::*/size(declval<R&>()))>> = range<R>;
+//[range.sized]s
+template<class T, class=void> INLINE_BOOL sized_range_impl = false;
+template<class T> INLINE_BOOL sized_range_impl<T, void_t<decltype(/*ranges::*/size(declval<T&>()))>> = range<T>;
+template<class T> concept sized_range = sized_range_impl<T>;
+
+//[range.view]
+struct view_base { };
+template<class T> struct view_interface { 
+    using __interface = view_interface;
+};
+template<class T, class=void> INLINE_BOOL from_view_interface = false;
+template<class T> INLINE_BOOL from_view_interface<T, void_t<typename T::__interface>> = derived_from<T, typename T::__interface>;
+template<class T> INLINE_BOOL enable_view = derived_from<T, view_base> || from_view_interface<T>;
+template<class T> concept view = range<T> && movable<T> && enable_view<T>;
 
 
-
+// [iota.view]
 template <class W, class B = unreachable_sentinel_t> class iota_view {
     struct S;
     struct I {
@@ -238,7 +262,8 @@ template<class R, class S>
     }
 };
 inline constexpr zip_fn zip {};
-
+} // namespace views
+namespace views {
 struct enumerate_fn {
     template<class R, enable_if_t<ranges::range<R>, int> =0> 
     decltype(auto) constexpr operator()(R&& r) const { return zip(iota(0), (R&&)r); }
@@ -246,9 +271,47 @@ struct enumerate_fn {
     friend constexpr decltype(auto) operator|(R&& r, enumerate_fn f) { return f(FWD(r)); }
 };
 inline constexpr enumerate_fn enumerate {};
-}
-}
+} // namespace views
+
+template<class T>
+struct subset_view {
+    struct iterator {
+        using iterator_category = forward_iterator_tag;
+        using value_type = T;
+        using reference = T;
+        using pointer = void;
+        using difference_type = make_signed_t<decltype(T() - T())>;
+        constexpr iterator(T t) noexcept : t(t), cur(t&(t-1)) {}
+        constexpr iterator& operator++() noexcept { cur = (cur - 1) & t; return *this; }
+        constexpr iterator operator++(int) noexcept { auto cp = *this; ++*this; return cp; }
+        constexpr T operator*() const noexcept { return cur; }
+        constexpr friend bool operator==(const iterator& i, const iterator& j) noexcept { return i.cur == j.cur; }
+        constexpr friend bool operator!=(const iterator& i, const iterator& j) noexcept { return i.cur != j.cur; }
+        constexpr friend bool operator==(const iterator& i, default_sentinel_t) noexcept { return i.cur == i.t; }
+        constexpr friend bool operator==(default_sentinel_t, const iterator& i) noexcept { return i.cur == i.t; }
+        constexpr friend bool operator!=(const iterator& i, default_sentinel_t) noexcept { return i.cur != i.t; }
+        constexpr friend bool operator!=(default_sentinel_t, const iterator& i) noexcept { return i.cur != i.t; }
+    private:
+        T t, cur;
+    };
+    subset_view(T t) noexcept: t(t) {}
+    iterator begin() const noexcept { return { t };  }
+    default_sentinel_t end() const noexcept { return {}; }
+private:
+    T t;
+};
+namespace views { // subset_view
+struct subset_fn {
+    template<class T, enable_if_t<is_integral_v<T>,int> =0>
+    auto constexpr operator()(T t) const noexcept { return subset_view { t }; }
+    template<class T, enable_if_t<is_integral_v<T>,int> =0>
+    friend auto constexpr operator|(T t, subset_fn f) noexcept { return f(t); }
+};
+inline constexpr subset_fn subset {};
+} // namespace views
+} // namespace ranges
     
+namespace rg = 
 inline namespace print {
 template<class T> struct brackets { T left; T right; };
 template<class T> brackets(T, T)->brackets<T>;
@@ -431,9 +494,6 @@ basic_ostream<Ch, Tr>& operator<<(basic_ostream<Ch, Tr>& os, W<Tp, Rest...> w) {
 inline namespace safe {
     
 static constexpr int ulp = 2;
- 
-template<class T> constexpr make_unsigned_t<T> to_unsigned(T t) noexcept { return t; }
-template<class T> constexpr make_signed_t<T> to_signed(T t) noexcept { return t; }
  
 template<class... T>
 using limits = numeric_limits<common_type_t<T...>>;
@@ -623,9 +683,7 @@ public:
 }
 
 inline namespace utility {
-
-inline namespace lambda {
-
+inline namespace functional {
 template<class Fun> 
 class Y_combinator {     
 	Fun fun_; 
@@ -635,8 +693,6 @@ public:
   	{ return fun_(*this, (Args&&)args...); }
 };
 template< class T > Y_combinator(T) -> Y_combinator<T>;
-} // namespace lambda
-inline namespace Hash {
 constexpr inline auto bit_view = [](auto&& t) {
     return string_view { reinterpret_cast<char const*>(addressof(t)), sizeof(t) };
 };
@@ -648,7 +704,7 @@ struct bit_equal {
     template<class T, class U>
     bool operator() (T&& t, U&& u) const { return bit_view(t) == bit_view(u); }
 };
-} // namespace Hash
+} // namespace functional
 } // namespace utility
 
 inline namespace init {
@@ -671,6 +727,8 @@ inline constexpr auto set_fast_io = [] {
 } // namespace init
 } // namespace my
 inline namespace simplify {
+    namespace rg = ranges;
+    namespace vw = ranges::views;
     inline constexpr ranges::views::iota_fn range {};
     inline constexpr ranges::views::zip_fn zp {};
     inline constexpr ranges::views::enumerate_fn en {};
