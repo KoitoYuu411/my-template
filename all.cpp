@@ -718,11 +718,9 @@ struct bit_equal {
 } // namespace utility
 
 inline namespace direction {
-constexpr int dir[][2] { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
-constexpr int dir8[][2] {{ 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } ,{1,1},{-1,1},{1,-1},{-1,-1}};
-constexpr auto valid = [](auto m, auto n) {
-return [=](size_t x, size_t y) { return x < m && y < n; };
-};
+constexpr int dir [][2] { {0,1}, {1,0}, {0,-1}, {-1,0} };
+constexpr int dir8[][2] { {0,1}, {1,0}, {0,-1}, {-1,0}, {1,1}, {-1,1}, {1,-1}, {-1,-1} };
+constexpr auto valid = [](auto m, auto n) { return [=](size_t x, size_t y) { return x < m && y < n; }; };
 }
 inline namespace init {
 
@@ -756,5 +754,6 @@ inline namespace simplify {
     inline constexpr ranges::views::iota_fn range {};
     inline constexpr ranges::views::zip_fn zp {};
     inline constexpr ranges::views::enumerate_fn en {};
+    #define Yc Y_combinator
 } // namespace simplify
 
