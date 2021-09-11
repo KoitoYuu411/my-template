@@ -1,21 +1,19 @@
 #include <bits/stdc++.h>
+#define debug(...) cout << #__VA_ARGS__ << "\t" << forward_as_tuple(__VA_ARGS__)/ebra << endl;
+#define ALL(...) begin(__VA_ARGS__), end(__VA_ARGS__)
+#define RALL(...) rbegin(__VA_ARGS__), rend(__VA_ARGS__)
+// [decompose.vector.size]
+inline constexpr size_t vector_size_v = 2;
 
-#define debug(...) cout << #__VA_ARGS__ << "\n" << (__VA_ARGS__) << endl;
-#define all(...) begin(__VA_ARGS__), end(__VA_ARGS__)
-
+inline namespace my {
+// [detail.macro]
 #define FWD(...) static_cast<decltype(__VA_ARGS__)&&>(__VA_ARGS__)
 #define concept inline constexpr bool
-#define INLINE_BOOL inline constexpr bool
+#define INLINE_BOOL inline constexpr bool    
+using namespace std;
+using ll = long long int;
+using ull = unsigned long long int;
 
-
-inline constexpr size_t vector_size_v = 2;
-namespace std {
-template<class> concept is_vector_v = false; template<class T> concept is_vector_v<vector<T>> = true;
-template<class T> struct tuple_size<vector<T>> : integral_constant<size_t, vector_size_v> {};
-template<size_t I, class T>struct tuple_element<I, vector<T>> : enable_if<true, T> {};
-template<size_t I, class T, enable_if_t<is_vector_v<decay_t<T>>, int> = 0>
-decltype(auto) get(T&& t) { return static_cast<T&&>(t)[I]; }
-} // namespace std
 
 template<int N>
 constexpr auto SieveOfEuler_() {
@@ -35,11 +33,8 @@ constexpr auto SieveOfEuler_() {
     return pair {prime, pos};
 };
 
-inline namespace my {
-using namespace std;
-using ll = long long int;
-using ull = unsigned long long int;
-    
+
+
 inline namespace type_traits {
 
 template<class T> struct type_identity { using type = T; };
@@ -310,8 +305,6 @@ struct subset_fn {
 inline constexpr subset_fn subset {};
 } // namespace views
 } // namespace ranges
-    
-namespace rg = 
 inline namespace print {
 template<class T> struct brackets { T left; T right; };
 template<class T> brackets(T, T)->brackets<T>;
@@ -332,6 +325,7 @@ struct object_brackets_delim { using _fmt = void; Obj& obj; Bra bra; Del del; };
 constexpr inline auto default_brackets = brackets { '[', ']' };
 constexpr inline auto default_delim = delim { ',' };
 constexpr inline auto et = delim { '\n' };
+constexpr inline auto ebra = brackets { "", "" };
 
 
 template<class Obj, class BraT> object_brackets<Obj, brackets<BraT>> 
@@ -683,6 +677,22 @@ public:
 }
 
 inline namespace utility {
+namespace udetail {
+    template<class,class=void> INLINE_BOOL has_top = false;
+    template<class T> INLINE_BOOL has_top<T, void_t<decltype(declval<T>().top())>> = true;
+}
+constexpr auto pop = [](auto& t) {
+    using T = decay_t<decltype(t)>;
+    auto __g = [&]()->auto& {
+        if constexpr (udetail::has_top<T>)
+            return t.top();
+        else
+            return t.front();
+    };
+    auto ret = move(const_cast<typename T::value_type&>(__g()));
+    t.pop();
+    return ret;
+};
 inline namespace functional {
 template<class Fun> 
 class Y_combinator {     
@@ -707,6 +717,13 @@ struct bit_equal {
 } // namespace functional
 } // namespace utility
 
+inline namespace direction {
+constexpr int dir[][2] { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
+constexpr int dir8[][2] {{ 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } ,{1,1},{-1,1},{1,-1},{-1,-1}};
+constexpr auto valid = [](auto m, auto n) {
+return [=](size_t x, size_t y) { return x < m && y < n; };
+};
+}
 inline namespace init {
 
 inline constexpr auto set_pmr = [] {
@@ -726,6 +743,13 @@ inline constexpr auto set_fast_io = [] {
 
 } // namespace init
 } // namespace my
+namespace std {
+template<class> concept is_vector_v = false; template<class T> concept is_vector_v<vector<T>> = true;
+template<class T> struct tuple_size<vector<T>> : integral_constant<size_t, vector_size_v> {};
+template<size_t I, class T>struct tuple_element<I, vector<T>> : enable_if<true, T> {};
+template<size_t I, class T, enable_if_t<is_vector_v<decay_t<T>>, int> = 0>
+decltype(auto) get(T&& t) { return static_cast<T&&>(t)[I]; }
+} // namespace std
 inline namespace simplify {
     namespace rg = ranges;
     namespace vw = ranges::views;
@@ -733,3 +757,4 @@ inline namespace simplify {
     inline constexpr ranges::views::zip_fn zp {};
     inline constexpr ranges::views::enumerate_fn en {};
 } // namespace simplify
+
