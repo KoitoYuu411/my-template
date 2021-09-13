@@ -55,6 +55,7 @@ template<class T> concept tuple_like = is_tuple_like<remove_reference_t<T>>;
 inline namespace concepts {
     template<class T, class U> concept derived_from = is_base_of_v<U, T>;
     template<class T> concept movable = is_convertible_v<T, T>;//[[not precisely]]
+    template<class T, class U> concept same_as = is_same_v<T, U>;
 }
 inline namespace integer {
 template<class T> constexpr make_unsigned_t<T> to_unsigned(T t) noexcept { return t; }
@@ -167,16 +168,11 @@ template <class T> constexpr T __bit_width(T x) noexcept {
     constexpr auto _Nd = numeric_limits<T>::digits;
     return _Nd - __countl_zero(x);
 }
-template <class T, class U = T> using bit_require = enable_if_t<is_integral_v<T> && is_unsigned_v<T>, U>;
+template <class T, class U = T> using bit_require = enable_if_t<is_integral_v<T>>;// && is_unsigned_v<T>, U>;
 
 //[bit.cast]
-template <class To, class From>
-enable_if_t<(sizeof(To) == sizeof(From)) && is_trivially_copyable<From>::value && is_trivial<To>::value, To>
-bit_cast(const From &src) noexcept {
-    To dst;
-    memcpy(&dst, &src, sizeof(To));
-    return dst;
-}
+template <class To, class From, enable_if_t<sizeof(To)==sizeof(From),int> =0>
+auto bit_cast(const From &src) noexcept { To dst; memcpy(&dst, &src, sizeof(To)); return dst; }
 // [bit.rot], rotating
 /// Rotate `x` to the left by `s` bits.
 template <class T> constexpr bit_require<T> rotl(T x, int s) noexcept { return __rotl(x, s); }
@@ -204,48 +200,35 @@ template <class T> constexpr bit_require<T> bit_ceil(T x) noexcept { return __bi
 template <class T> constexpr bit_require<T> bit_floor(T x) noexcept { return __bit_floor(x); }
 /// The smallest integer greater than the base-2 logarithm of `x`.
 template <class T> constexpr bit_require<T> bit_width(T x) noexcept { return __bit_width(x); }
-
-/// Byte order
-enum class endian { little = __ORDER_LITTLE_ENDIAN__, big = __ORDER_BIG_ENDIAN__, native = __BYTE_ORDER__ };
-
 }
 inline namespace algo {
-
 struct identity { template<class T> T&& operator()(T&& t) const { return (T&&)t; }  };
 template<class C = less<>, class P = identity>
 struct proj_cmp {
-    C comp;
-    P proj;
-    template<class CC, class PP> 
-    proj_cmp(CC&& comp, PP&& proj) : comp((CC&&)comp), proj((PP&)proj) {}
-    template<class T, class U> decltype(auto) operator()(T&& t, U&& u) const 
-    { return invoke(comp, invoke(proj, (T&&)t), invoke(proj, (U&&)u)); }
+    C comp; P proj;
+    template<class CC, class PP>  proj_cmp(CC&& comp, PP&& proj) : comp((CC&&)comp), proj((PP&)proj) {}
+    template<class T, class U>bool operator()(T&& t, U&& u) const { return invoke(comp, invoke(proj, (T&&)t), invoke(proj, (U&&)u)); }
 };
 template<class C, class P> proj_cmp(C, P)->proj_cmp<C, P>;
-
 }
-
 inline namespace ITER {
-    template<class T> using iter_difference_t = ptrdiff_t;// [[todo]]
-    template<class I> using iter_value_t = typename iterator_traits<I>::value_type;
-    template<class T> using iter_reference_t = decltype(*declval<T>());
-    template<class T> using iter_rvalue_reference_t = iter_reference_t<T>; // [[todo]] = decltype(ranges::iter_move(declval<T&>()));
-
-    //[default.sentinel]
-    struct default_sentinel_t {};
-    inline constexpr default_sentinel_t default_sentinel {};
-
-    //[unreachable.sentinel]
-    struct unreachable_sentinel_t { //[[todo] : I is weakly_incrementable]
-        template<class I> friend constexpr bool operator==(I, unreachable_sentinel_t) { return false; }
-        template<class I> friend constexpr bool operator!=(I, unreachable_sentinel_t) { return true; }
-        template<class I> friend constexpr bool operator==(unreachable_sentinel_t, I) { return false; }
-        template<class I> friend constexpr bool operator!=(unreachable_sentinel_t, I) { return true; } 
-    };
-    inline constexpr unreachable_sentinel_t unreachable_sentinel {};
-    
+template<class T> using iter_difference_t = ptrdiff_t;// [[todo]]
+template<class I> using iter_value_t = typename iterator_traits<I>::value_type;
+template<class T> using iter_reference_t = decltype(*declval<T>());
+template<class T> using iter_rvalue_reference_t = iter_reference_t<T>; // [[todo]] = decltype(ranges::iter_move(declval<T&>()));
+//[default.sentinel]
+struct default_sentinel_t {}; inline constexpr default_sentinel_t default_sentinel {};
+//[unreachable.sentinel]
+struct unreachable_sentinel_t { //[[todo] : I is weakly_incrementable]
+    template<class I> friend constexpr bool operator==(I, unreachable_sentinel_t) { return false; }
+    template<class I> friend constexpr bool operator!=(I, unreachable_sentinel_t) { return true; }
+    template<class I> friend constexpr bool operator==(unreachable_sentinel_t, I) { return false; }
+    template<class I> friend constexpr bool operator!=(unreachable_sentinel_t, I) { return true; } 
+};
+inline constexpr unreachable_sentinel_t unreachable_sentinel {};
 } // namespace ITER
 namespace ranges {
+using std::empty, std::begin, std::end, std::data;
 //[ranges.range] concepts
 template<class T, class = void> INLINE_BOOL range_impl = false;
 template<class T> INLINE_BOOL range_impl<T, void_t<decltype(begin(declval<T&>()), end(declval<T&>()))>> = true;
@@ -260,56 +243,61 @@ template<class R> using range_value_t = iter_value_t<iterator_t<R>>;
 template<class R> using range_reference_t = iter_reference_t<iterator_t<R>>;
 template<class R> using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
-//[range.sized]s
+//[range.sized]
 template<class T, class=void> INLINE_BOOL sized_range_impl = false;
 template<class T> INLINE_BOOL sized_range_impl<T, void_t<decltype(/*ranges::*/size(declval<T&>()))>> = range<T>;
 template<class T> concept sized_range = sized_range_impl<T>;
 
 //[range.view]
 struct view_base { };
-template<class T> struct view_interface { 
-    using __interface = view_interface;
+template<class D> class view_interface {
+    constexpr D& derived() noexcept { return static_cast<D&>(*this); }
+    constexpr const D& derived() const noexcept { return static_cast<const D&>(*this); }
+public:     using __interface = view_interface;
+    constexpr bool empty() { return ranges::begin(derived()) == ranges::end(derived()); } // forward_range<D>
+    constexpr bool empty() const { return ranges::begin(derived()) == ranges::end(derived()); } // forward_range<const D>
+    constexpr explicit operator bool() { return !ranges::empty(derived()); }
+    constexpr explicit operator bool() const { return !ranges::empty(derived()); }
+    constexpr auto data() { return to_address(begin(derived())); } // contigious_range<D>
+    constexpr auto data() const { return to_address(begin(derived())); }
+    constexpr auto size() { return ranges::end(derived()) - ranges::begin(derived()); }
+    constexpr auto size() const { return ranges::end(derived()) - ranges::begin(derived()); }
+    constexpr decltype(auto) front() { return *begin(derived()); }
+    constexpr decltype(auto) front() const { return *begin(derived()); }
+    constexpr decltype(auto) back() { return *prev(end(derived())); }
+    constexpr decltype(auto) back() const { return *prev(end(derived())); }
+    template<class R = D> constexpr decltype(auto) operator[](range_difference_t<R> t) { return ranges::begin(derived())[t]; }
+    template<class R = D> constexpr decltype(auto) operator[](range_difference_t<R> t) const { return ranges::begin(derived())[t]; }
 };
+
 template<class T, class=void> INLINE_BOOL from_view_interface = false;
 template<class T> INLINE_BOOL from_view_interface<T, void_t<typename T::__interface>> = derived_from<T, typename T::__interface>;
 template<class T> INLINE_BOOL enable_view = derived_from<T, view_base> || from_view_interface<T>;
 template<class T> concept view = range<T> && movable<T> && enable_view<T>;
 
-
 // [iota.view]
-template <class W, class B = unreachable_sentinel_t> class iota_view {
-    struct S;
-    struct I {
+template <class W, class B = unreachable_sentinel_t> class iota_view : public view_interface<iota_view<W, B>> {
+    struct S; struct I {
         using iterator_category = random_access_iterator_tag; // [[todo : input_iterator_tag]]
         using value_type = W;
         using difference_type = make_signed_t<decltype(W() - W())>;
         using pointer = void;
         using reference = W;
-
-        I() = default;
-        constexpr explicit I(W v) : v(v) {}
-
+        I() = default; constexpr explicit I(W v) : v(v) {}
         constexpr W operator*() const { return v; }
         constexpr I& operator++() { ++v; return *this; }
         constexpr I operator++(int) { auto t = *this; ++*this; return t; }
         constexpr I& operator--() { --v; return *this; }
         constexpr I operator--(int) { auto t = *this; --*this; return t; }
         constexpr I& operator+=(difference_type n) {
-            if constexpr (is_unsigned_v<W>)
-                n >= difference_type(0) ? v += static_cast<W>(n) : v -= static_cast<W>(-n);
-            else
-                v += n;
+    if constexpr (is_unsigned_v<W>) n >= difference_type(0) ? v += static_cast<W>(n) : v -= static_cast<W>(-n); else v += n;
             return *this;
         }
         constexpr I& operator-=(difference_type n) {
-            if constexpr (is_unsigned_v<W>)
-                n >= difference_type(0) ? v -= static_cast<W>(n) : v += static_cast<W>(-n);
-            else
-                v -= n;
+    if constexpr (is_unsigned_v<W>) n >= difference_type(0) ? v -= static_cast<W>(n) : v += static_cast<W>(-n); else v -= n;
             return *this;
         }
         constexpr W operator[](difference_type n) { return W(v + n); }
-
         friend constexpr bool operator==(const I& x, const I& y) { return x.v == y.v; }
         friend constexpr bool operator!=(const I& x, const I& y) { return x.v != y.v; }
         friend constexpr bool operator< (const I& x, const I& y) { return x.v <  y.v; }
@@ -322,55 +310,38 @@ template <class W, class B = unreachable_sentinel_t> class iota_view {
         friend constexpr I operator-(I i, difference_type n) { return i -= n; }
         friend constexpr difference_type operator-(const I& x, const I& y) {
             using D = difference_type;
-            if constexpr (is_integral_v<W>) {
-                if constexpr (is_signed_v<W>)
-                   	 return D(D(x.v) - D(y.v));
-                else
-                    return (y.v > x.v) ? D(-D(y.v - x.v)) : D(x.v - y.v);
-            } else
-                return x.v - y.v;
+            if constexpr (is_integral_v<W>)
+            { if constexpr (is_signed_v<W>) return D(D(x.v) - D(y.v)); else return (y.v > x.v) ? D(-D(y.v - x.v)) : D(x.v - y.v); }
+            else return x.v - y.v;
         }
-    private: 
-        W v;
-        friend S;
+    private: W v; friend S;
     };
     struct S {
-    private:
-        constexpr bool _M_equal(const I& x) const { return x.v == b; }
-        B b;
-    public:
         S() = default;
         constexpr explicit S(B b) : b(b) {}
         friend constexpr bool operator==(const I& x, const S& y) { return y._M_equal(x); }
         friend constexpr typename I::difference_type operator-(const I& x, const S& y) { return x.v - y.b; }
         friend constexpr typename I::difference_type operator-(const S& x, const I& y) { return -(y - x); }
+    private: constexpr bool _M_equal(const I& x) const { return x.v == b; } B b;
     };
-    W v;
-    B b;
+    W v; B b;
 public:
     iota_view() = default;
     constexpr explicit iota_view(W v) : v(v) {}
     constexpr iota_view(type_identity_t<W> v, type_identity_t<B> b) : v(v), b(b) {}
     constexpr I begin() const { return I{v}; }
     constexpr auto end() const {
-        if constexpr (is_same_v<W, B>)
-            return I { b };
-        else if constexpr (is_same_v<B, unreachable_sentinel_t>)
-            return unreachable_sentinel;
-        else
-            return S { b };    
+        if constexpr (is_same_v<W, B>) return I { b };
+        else if constexpr (is_same_v<B, unreachable_sentinel_t>) return unreachable_sentinel;
+        else return S { b };    
     }
     constexpr auto size() const {
         if constexpr (is_integral_v<W> && is_integral_v<B>)
-            return v < 0 ? b < 0 ? to_unsigned(-v) - to_unsigned(-b) 
-            : to_unsigned(b) + to_unsigned(-v) : to_unsigned(b) - to_unsigned(v);
-        else
-            return to_unsigned(b - v);
+      return v < 0 ? b < 0 ? to_unsigned(-v) - to_unsigned(-b) : to_unsigned(b) + to_unsigned(-v) : to_unsigned(b) - to_unsigned(v);
+        else return to_unsigned(b - v);
     }
 };
 template <class W, class B> iota_view(W, B) ->iota_view<W, B>;
-
-    
 namespace views {
 struct iota_fn {
     template <class T> constexpr auto operator()(T&& e) const { return iota_view { FWD(e) }; }
@@ -378,7 +349,6 @@ struct iota_fn {
 };
 inline constexpr iota_fn iota;
 }
-
 namespace views {
 struct zip_fn {
 template<class R, class S>
@@ -388,18 +358,20 @@ template<class R, class S>
             S s;
             struct sentinel;
             struct iterator {
-                iterator_t<R> r;
-                iterator_t<S> s;
-                constexpr pair<range_reference_t<R>, range_reference_t<S>>
-                operator*() const { return { *r, *s }; }
+                using iterator_category = input_iterator_tag;
+                using pointer = void;
+                using value_type = pair<range_reference_t<R>, range_reference_t<S>>;
+                using reference = value_type;
+                using difference_type = common_type_t<range_difference_t<R>, range_reference_t<S>>;
+                iterator_t<R> r;    iterator_t<S> s;
+                constexpr reference operator*() const { return { *r, *s }; }
                 constexpr iterator& operator++() { ++r; ++s; return *this; }
                 constexpr iterator operator++(int) { auto r = *this; ++*this; return r; }
                 constexpr bool operator!=(const iterator& o) const { return r != o.r && s != o.s; }
                 constexpr bool operator!=(const sentinel& o) const { return r != o.r && s != o.s; }
             };
             struct sentinel {
-                sentinel_t<R> r;
-                sentinel_t<S> s;
+                sentinel_t<R> r;    sentinel_t<S> s;
                 constexpr bool operator!=(const iterator& o) const { return r != o.r && s != o.s; }
             };
             iterator begin() { return { std::begin(r), std::begin(s) }; }
@@ -741,37 +713,24 @@ public:
 }
 
 inline namespace utility {
-namespace udetail {
+namespace pop_detail {
     template<class,class=void> INLINE_BOOL has_top = false;
     template<class T> INLINE_BOOL has_top<T, void_t<decltype(declval<T>().top())>> = true;
 }
-
 constexpr auto pop = [](auto& t) {
     using T = decay_t<decltype(t)>;
-    auto __g = [&]()->auto&& { if constexpr (udetail::has_top<T>) return t.top(); else return t.front(); };
+    auto __g = [&]()->auto&& { if constexpr (pop_detail::has_top<T>) return t.top(); else return t.front(); };
     auto ret = move(const_cast<typename T::value_type&>(__g()));
     t.pop(); return ret;
 };
 
 inline namespace functional {
-template<class Fun> class Y_combinator {     
-	Fun fun_; 
-public:
+template<class Fun> struct Y_combinator {     
+	Fun fun_;
 	template<class F> Y_combinator(F&& fun): fun_(FWD(fun)) {}     
 	template<class... Args> decltype(auto) operator()(Args&&...args) const { return fun_(*this, (Args&&)args...); }
 };
 template< class T > Y_combinator(T) -> Y_combinator<T>;
-constexpr inline auto bit_view = [](auto&& t) {
-    return string_view { reinterpret_cast<char const*>(addressof(t)), sizeof(t) };
-};
-struct bit_hash {
-    template<class T>
-    size_t operator() (T&& t) const { return hash<string_view> {} (bit_view(t)); }
-};
-struct bit_equal {
-    template<class T, class U>
-    bool operator() (T&& t, U&& u) const { return bit_view(t) == bit_view(u); }
-};
 } // namespace functional
 } // namespace utility
 
