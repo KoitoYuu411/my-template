@@ -733,7 +733,7 @@ public:     using __interface = view_interface;
 ST view_base { };
 TP<CL T, CL=void> IC bool from_view_interface = false;
 TP<CL T> IC bool from_view_interface<T, void_t<typename T::__interface>> = derived_from<T, typename T::__interface>;
-TP<CL T> IC bool enable_view = derived_from<T, view_base> || from_view_interface<T>;
+TP<CL T> IC bool enable_view = derived_from<T, view_base> || from_view_interface<remove_cvref_t<T>>;
 TP<CL T> concept view = range<T> && movable<T> && enable_view<T>;
 //[range.definements]
 TP<CL T>concept viewable_range = range<T> && ((view<remove_cvref_t<T>> && constructible_from<remove_cvref_t<T>, T>) ||
@@ -826,7 +826,7 @@ NP views {
 IC ST all_fn {
 private:
     TP<CL R> auto CEXP impl(R&& r, tag<2>) const noexcept(noexcept(decay_copy(FWD(r))))
-        -> requires_expr<view<R>, decltype(decay_copy(FWD(r)))> const { return decay_copy(FWD(r)); }
+        -> requires_expr<view<R>, decltype(decay_copy(FWD(r)))> { return decay_copy(FWD(r)); }
     TP<CL R> auto CEXP impl(R&& r, tag<1>) const noexcept(noexcept(ref_view(FWD(r))))
         -> decltype(ref_view(FWD(r))) { return ref_view(FWD(r)); }
     TP<CL R> auto CEXP impl(R&& r, tag<0>) const noexcept(noexcept(subrange(FWD(r)))) 
@@ -1073,6 +1073,7 @@ public:
         else if CEXP (is_same_v<B, unreachable_sentinel_t>) return unreachable_sentinel;
         else return S { b };    
     }
+    LazyReq(W, same_as<WW, B> || (integral<W> && integral<B>) || sized_sentinel_for<B, W>)
     CEXP auto size() const {
         if CEXP (is_integral_v<W> && is_integral_v<B>)
     return v < 0 ? b < 0 ? to_unsigned(-v) - to_unsigned(-b) : to_unsigned(b) + to_unsigned(-v) : to_unsigned(b) - to_unsigned(v);
