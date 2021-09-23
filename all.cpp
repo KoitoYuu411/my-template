@@ -30,12 +30,12 @@ inline namespace my {
 #define concept IC bool
 
 #define Req(...) requires_expr<__VA_ARGS__>
-#define ReqExpr(...) bool_v<true, decltype(__VA_ARGS__)>
+#define ReqExpr(...) boolT<true, decltype(__VA_ARGS__)>
 #define TpReqt(...) Req(__VA_ARGS__) = 0>
 #define TpReq(...) TP< __VA_ARGS__ , TpReqt
 
-#define LazyReq(Name, ...) TP<CL Name##Name = Name , Req(__VA_ARGS__) = 0>
-
+#define LazyT(T,...) TP<CL t=T, Req(boolT<true, t> && (__VA_ARGS__) ) = 0>
+#define LazyV(V,...) TP<auto v=V, Req(boolV<true, v> && (__VA_ARGS__) ) = 0>
 
 #define Reqs(...) Req(__VA_ARGS__) {},
 #define ImplRetReq(...) __VA_ARGS__ )>>{}, 
@@ -51,7 +51,7 @@ inline namespace my {
 #define ConceptRef(NAME, ...) requires_<NAME##_concept, __VA_ARGS__>
 
 #define RET_THIS(...) { __VA_ARGS__  return *this; }
-#define DefSuffix(OP) { auto t=*this; OP *this; return t; }
+#define DefSuffix(OP) { auto tt=*this; OP *this; return tt; }
 #define cst_ref (const it& i, const it& j)
 #define D_Ty difference_type
 
@@ -68,8 +68,8 @@ TP<CL R, CL... A,CL=decltype(&R::TP freq<A...>)>auto _req_impl(int)->true_type;
 TP<CL R, CL... A> IC bool requires_ = decltype(_req_impl<R, A...>(0))::value;
 TP<bool E,CL T=int> using requires_expr = enable_if_t<E, T>;
 TP<size_t I> ST tag : tag<I - 1>{}; TP<>ST tag<0> {};
-TP<bool B, CL...> IC bool bool_v = B; 
-TP<bool B, auto...> IC bool bool_v0 = B; 
+TP<bool B,CL...> IC bool boolT=B; 
+TP<bool B,auto...> IC bool boolV=B;
 //[remove.cvref]
 TP<CL T>ST type_identity { using type = T;};
 TP<CL T>using type_identity_t = typename type_identity<T>::type;
@@ -605,8 +605,8 @@ TP<CL T>using iter_concept = decltype(iter_concept_impl<T>());
 NP ranges {
 using std::empty, std::data;
 auto size = [](auto&& x) DCLT_RET(std::size(FWD(x)));
-auto begin = [](auto&& x)->decltype(std::begin(x)) {return std::begin(FWD(x));};//[todo]
-auto end = [](auto&& x){return std::end(FWD(x));};//[todo]
+auto begin = [](auto&& x) DCLT_RET(std::begin(FWD(x)));
+auto end = [](auto&& x) DCLT_RET(std::end(FWD(x)));
 inline namespace unsp {
 auto iter_swap = [](auto&& x, auto&& y) DCLT_RET(std::iter_swap(FWD(x), FWD(y)));
 }
@@ -712,28 +712,27 @@ TP<CL D> CL view_interface {
     CEXP D& derived() noexcept RET(static_cast<D&>(*this))
     CEXP const D& derived() const noexcept RET(static_cast<const D&>(*this))
 public:     using __interface = view_interface;
-    LazyReq(D, forward_range<DD>) CEXP bool empty() RET(begin(derived()) == end(derived()))
-    LazyReq(D, forward_range<const DD>) CEXP bool empty() const RET(begin(derived()) == end(derived()))
-    LazyReq(D, ReqExpr(ranges::empty(DCLV(DD&)))) explicit COP bool() RET(!ranges::empty(derived()) )
-    LazyReq(D, ReqExpr(ranges::empty(DCLV(DD&)))) explicit COP bool() const RET(!ranges::empty(derived()) )
-    LazyReq(D, ReqExpr(ranges::data(DCLV(DD&)))) CEXP auto data() RET(to_address(begin(derived())))
-    LazyReq(D, ReqExpr(ranges::data(DCLV(const DD&)))) CEXP auto data() const RET(to_address(begin(derived())))
-    LazyReq(D, forward_range<DD> && sized_sentinel_for<sentinel_t<DD>, iterator_t<DD>>)
-    CEXP auto size() RET(end(derived()) - ::begin(derived()))
-    LazyReq(D, forward_range<const DD> && sized_sentinel_for<sentinel_t<const DD>, iterator_t<const DD>>)
+    LazyT(D,forward_range<t>) CEXP bool empty() RET(begin(derived()) == end(derived()))
+    LazyT(D,forward_range<const t>) CEXP bool empty() const RET(begin(derived()) == end(derived()))
+    LazyT(D,ReqExpr(ranges::empty(DCLV(t&)))) explicit COP bool() RET(!ranges::empty(derived()) )
+    LazyT(D,ReqExpr(ranges::empty(DCLV(t&)))) explicit COP bool() const RET(!ranges::empty(derived()) )
+    LazyT(D,ReqExpr(ranges::data(DCLV(t&)))) CEXP auto data() RET(to_address(begin(derived())))
+    LazyT(D,ReqExpr(ranges::data(DCLV(const t&)))) CEXP auto data() const RET(to_address(begin(derived())))
+    LazyT(D,forward_range<t> && sized_sentinel_for<sentinel_t<t>, iterator_t<t>>)
+    CEXP auto size() RET(ranges::end(derived()) - ranges::begin(derived()))
+    LazyT(D,forward_range<const t> && sized_sentinel_for<sentinel_t<const t>, iterator_t<const t>>)
     CEXP auto size() const RET(end(derived()) - ::begin(derived()))
-    LazyReq(D, forward_range<DD>) CEXP DCLT(auto) front() RET(*begin(derived()))
-    LazyReq(D, forward_range<const DD>) CEXP DCLT(auto) front() const RET(begin(derived()))
-    LazyReq(D, bidirectional_range<DD> && common_range<DD>) CEXP DCLT(auto) back() RET(*prev(end(derived())))
-    LazyReq(D, bidirectional_range<const DD> && common_range<const DD>) CEXP DCLT(auto) back() const RET(*prev(end(derived())))
-    LazyReq(D, true) DCLT(auto) COP[](range_difference_t<DD> t) RET(begin(derived())[t])
-    LazyReq(D, true) DCLT(auto) COP[](range_difference_t<DD> t) const RET(begin(derived())[t])
+    LazyT(D,forward_range<t>) CEXP DCLT(auto) front() RET(*begin(derived()))
+    LazyT(D,forward_range<const t>) CEXP DCLT(auto) front() const RET(begin(derived()))
+    LazyT(D,bidirectional_range<t> && common_range<t>) CEXP DCLT(auto) back() RET(*prev(end(derived())))
+    LazyT(D,bidirectional_range<const t> && common_range<const t>) CEXP DCLT(auto) back() const RET(*prev(end(derived())))
+    LazyT(D,random_access_range<t>) DCLT(auto) COP[](range_difference_t<t> n) RET(begin(derived())[n])
+    LazyT(D,random_access_range<t>) DCLT(auto) COP[](range_difference_t<t> n) const RET(begin(derived())[n])
 };
 //[range.view]
-ST view_base { };
-TP<CL T, CL=void> IC bool from_view_interface = false;
-TP<CL T> IC bool from_view_interface<T, void_t<typename T::__interface>> = derived_from<T, typename T::__interface>;
-TP<CL T> IC bool enable_view = derived_from<T, view_base> || from_view_interface<remove_cvref_t<T>>;
+ST view_base{};
+ConceptDef(f_v_i, CL T)()(Reqs(derived_from<T, typename T::__interface>));
+TP<CL T> IC bool enable_view = derived_from<T, view_base> || ConceptRef(f_v_i, T);
 TP<CL T> concept view = range<T> && movable<T> && enable_view<T>;
 //[range.definements]
 TP<CL T>concept viewable_range = range<T> && ((view<remove_cvref_t<T>> && constructible_from<remove_cvref_t<T>, T>) ||
@@ -751,14 +750,13 @@ TP<CL T, CL U> concept different_from = !same_as<remove_cvref_t<T>, remove_cvref
 ST dangling { dangling()noexcept=default;TP<CL...A>dangling(A&&...){} };
 TP<CL T> ST box_ : optional<T> {
     using optional<T>::optional;
-    TP<CL TT=T,requires_expr<!default_initializable<TT>> = 0> box_() = delete;
-    TP<CL TT=T,requires_expr<default_initializable<TT>> = 0>
-    CEXP box_() noexcept(is_nothrow_default_constructible_v<T>) : optional<T>{in_place} { }
-    box_(const box_&) = default; box_(box_&&) = default;
     using optional<T>::operator=;
-    LazyReq(T, !assignable_from<TT&, const T&>) box_& operator=(const box_& other) noexcept(is_nothrow_copy_constructible_v<T>)
+    LazyT(T,!default_initializable<T>) box_() = delete;
+    LazyT(T,default_initializable<T>) CEXP box_()noexcept(is_nothrow_default_constructible_v<T>):optional<T>{in_place}{}
+    box_(const box_&)=default; box_(box_&&)=default;
+    LazyT(T, !assignable_from<T&, const T&>) box_& operator=(const box_& other) noexcept(is_nothrow_copy_constructible_v<T>)
     RET_THIS(if (this != addressof(other)) { if (other) this->emplace(*other); else this->reset(); })
-    LazyReq(T, !assignable_from<TT&, T>) box_& operator=(box_&& other) noexcept(is_nothrow_move_constructible_v<T>)
+    LazyT(T, !assignable_from<T&, T>) box_& operator=(box_&& other) noexcept(is_nothrow_move_constructible_v<T>)
     RET_THIS(if (this != addressof(other)) { if (other) this->emplace(move(*other)); else this->reset();} ) 
 };
 TP<CL T> using copyable_box = box_<T>;
@@ -773,73 +771,56 @@ CL subrange : public view_interface<subrange<I, S, K>> {
     static_assert(sentinel_for<S, I>);
     static_assert(K == subrange_kind::sized || !sized_sentinel_for<S, I>);
     static CEXP bool StoreSize = (K == subrange_kind::sized && !sized_sentinel_for<S, I>);
-    using size_type = make_unsigned_t<iter_difference_t<I>>;
+    using sz_t = make_unsigned_t<iter_difference_t<I>>;
 public:
-    subrange()=default;
-    TP<CL II, requires_expr<convertible_to_non_slicing<II, I> && !StoreSize> =0 > 
-    CEXP subrange(II i, S s) : i(move(i)), s{s} {}
-    TP<CL II, requires_expr<convertible_to_non_slicing<II, I> && K == subrange_kind::sized> =0 > 
-    CEXP subrange(II i, S s, size_type n) : i(move(i)), s{s} ,sz {n} {}
-    TP<CL R, requires_expr<borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&
-    convertible_to<sentinel_t<R>,S> && StoreSize> =0> CEXP subrange(R&& r) : subrange(r, ::size(r)) {}
-    TP<CL R, requires_expr<borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&
-    convertible_to<sentinel_t<R>,S> && !StoreSize> =0> subrange(R&& r) :subrange(::begin(r), ::end(r)) {}
-    TP<CL R, requires_expr<borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&
-    convertible_to<sentinel_t<R>,S> && K==subrange_kind::sized> =0> 
-    CEXP subrange(R&& r, size_type n) :subrange(::begin(r), ::end(r), n) {}
-    TP<CL II=I>CEXP auto begin()->enable_if_t<copyable<II>, I> const { return i; }
-    TP<CL II=I>CEXP auto begin()->enable_if_t<!copyable<II>, I> { return move(i); }
-    CEXP S end() const { return s; }
-    CEXP bool empty() const { return i == s; }
-    TP<auto KK=K>CEXP auto size()->enable_if_t<KK==subrange_kind::sized, size_type>  const
-    { if CEXP (StoreSize) return sz; else return to_unsigned(s -i ); }
-private: I i; S s; [[__no_unique_address__]] conditional_t<StoreSize, size_type, dangling> sz;
+    TpReq(CL II)(convertible_to_non_slicing<II,I>&&!StoreSize)CEXP subrange(I i,S s):i(move(i)),s{s}{}
+    TpReq(CL II)(convertible_to_non_slicing<II,I>&&K==subrange_kind::sized)CEXP subrange(II i,S s,sz_t n):i(move(i)),s{s},sz{n}{}
+    TpReq(CL R)(borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&convertible_to<sentinel_t<R>,S> && StoreSize)
+    CEXP subrange(R&&r):subrange(r,ranges::size(r)){}
+    TpReq(CL R)(borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&convertible_to<sentinel_t<R>,S> && !StoreSize)
+    subrange(R&&r):subrange(ranges::begin(r),ranges::end(r)) {}
+    TpReq(CL R)(borrowed_range<R>&&convertible_to_non_slicing<iterator_t<R>,I>&&convertible_to<sentinel_t<R>,S>&&K==subrange_kind::sized)
+    CEXP subrange(R&&r,sz_t n):subrange(ranges::begin(r), ranges::end(r), n) {}
+    LazyT(I,copyable<I>)CEXP auto begin()const RET(i)
+    LazyT(I,!copyable<I>)CEXP auto begin()RET(move(i))
+    CEXP S end()const RET(s)
+    CEXP bool empty()const RET(i==s)
+    LazyV(K,K==subrange_kind::sized)CEXP sz_t size()const{if CEXP(StoreSize)return sz; else return to_unsigned(s-i);}
+private: I i; S s; [[__no_unique_address__]] conditional_t<StoreSize, sz_t, dangling> sz;
 };
-TP<CL I,CL S, requires_expr<sentinel_for<S,I>> =0>subrange(I, S)->subrange<I, S>;
-TP<CL I,CL S, requires_expr<sentinel_for<S,I>> =0>
-subrange(I, S, make_unsigned_t<iter_difference_t<I>>)->subrange<I,S,subrange_kind::sized>;
-TP<CL R, requires_expr<borrowed_range<R>> = 0> subrange(R&&) -> subrange<iterator_t<R>, sentinel_t<R>, 
-    (sized_range<R> || sized_sentinel_for<iterator_t<R>, sentinel_t<R>>) ? subrange_kind::sized : subrange_kind::unsized>;
-TP<CL R, requires_expr<borrowed_range<R>> =0> subrange(R&&, make_signed_t<range_difference_t<R>>) ->
-subrange<iterator_t<R>, sentinel_t<R>,subrange_kind::sized>;
+TpReq(CL I,CL S)(sentinel_for<S,I>)subrange(I, S)->subrange<I, S>;
+TpReq(CL I,CL S)(sentinel_for<S,I>)subrange(I, S, make_unsigned_t<iter_difference_t<I>>)->subrange<I,S,subrange_kind::sized>;
+TpReq(CL R)(borrowed_range<R>)subrange(R&&) -> subrange<iterator_t<R>, sentinel_t<R>, 
+(sized_range<R> || sized_sentinel_for<iterator_t<R>, sentinel_t<R>>) ? subrange_kind::sized : subrange_kind::unsized>;
+TpReq(CL R)(borrowed_range<R>)subrange(R&&, make_signed_t<range_difference_t<R>>)
+->subrange<iterator_t<R>,sentinel_t<R>,subrange_kind::sized>;
 
 TP<bool C, CL T> using maybe_const = conditional_t<C, const T, T>;
 //[range.ref.view]
-TP<CL R, requires_expr<range<R>&&is_object_v<R>> =0> CL ref_view :public view_interface<ref_view<R>> {
-ST ref_req { static void FUN(R&); static void FUN(R&&)=delete;
-    TP<CL T>auto freq()->decltype(FUN(DCLV(T)));
-};
+TpReq(CL R)(range<R>&&is_object_v<R>)CL ref_view:public view_interface<ref_view<R>> {
+ST ref_req_concept{static void FUN(R&); static void FUN(R&&)=delete;TP<CL T>auto freq()->decltype(FUN(DCLV(T)));};
     R* r;
 public:
-    TP<CL T, requires_expr<different_from<T, ref_view> && convertible_to<T,R&>&& requires_<ref_req,T>> = 0>
-    CEXP ref_view(T&& t) : r(addressof(static_cast<R&>(FWD(t)))) {}
-    CEXP R& base() const { return *r; }
-    CEXP auto begin() const { return ::begin(*r); }
-    CEXP auto end() const { return ::end(*r); }
-    LazyReq(R, ReqExpr(ranges::empty(*DCLV(RR)))) CEXP bool empty() const { return ranges::empty(*r); }
-    LazyReq(R, sized_range<RR>)CEXP auto size() const { return ranges::size(*r); }
-    LazyReq(R, contiguous_range<RR>)CEXP auto data() const { return ranges::data(*r); }
+    TpReq(CL T)(different_from<T, ref_view>&&convertible_to<T,R&>&& ConceptRef(ref_req,T))
+    CEXP ref_view(T&& t):r(&(R&)(FWD(t))){}
+    CEXP R& base()const RET(*r)
+    CEXP auto begin() const RET(ranges::begin(*r))
+    CEXP auto end() const RET(ranges::end(*r))
+    LazyT(R, ReqExpr(ranges::empty(*DCLV(t)))) CEXP bool empty() const RET(ranges::empty(*r))
+    LazyT(R, sized_range<R>)CEXP auto size() const RET(ranges::size(*r))
+    LazyT(R, contiguous_range<R>)CEXP auto data() const RET(ranges::data(*r))
 };
 TP<CL R> ref_view(R&)->ref_view<R>;
-
 NP views {
 IC ST all_fn {
-private:
-    TP<CL R> auto CEXP impl(R&& r, tag<2>) const noexcept(noexcept(decay_copy(FWD(r))))
-        -> requires_expr<view<R>, decltype(decay_copy(FWD(r)))> { return decay_copy(FWD(r)); }
-    TP<CL R> auto CEXP impl(R&& r, tag<1>) const noexcept(noexcept(ref_view(FWD(r))))
-        -> decltype(ref_view(FWD(r))) { return ref_view(FWD(r)); }
-    TP<CL R> auto CEXP impl(R&& r, tag<0>) const noexcept(noexcept(subrange(FWD(r)))) 
-        -> decltype(subrange(FWD(r))) { return subrange(FWD(r)); }
-public:
-    TP<CL T> auto COP ()(T&& t) const noexcept(noexcept(impl(FWD(t), tag<2>{})))
-        -> decltype(impl(FWD(t), tag<2>{})) { return impl(FWD(t), tag<2>{}); }
-    TP<CL T> auto FCOP |(T&& t,all_fn f) noexcept(noexcept(f(FWD(t))))
-        -> decltype(f(FWD(t))) { return f(FWD(t)); }
+    TpReq(CL R)(view<R>) auto CEXP impl(R&& r, tag<2>) const NOEXP_DCLT_RET(decay_copy(FWD(r)))
+    TP<CL R> auto CEXP impl(R&& r, tag<1>) const NOEXP_DCLT_RET(ref_view(FWD(r)))
+    TP<CL R> auto CEXP impl(R&& r, tag<0>) const NOEXP_DCLT_RET(subrange(FWD(r)))
+    TP<CL T> auto COP ()(T&& t) const NOEXP_DCLT_RET(impl(FWD(t), tag<2>{}))
+    TP<CL T> auto FCOP |(T&& t,all_fn f) NOEXP_DCLT_RET(f(FWD(t)))
 } all;
 TP<CL T> using all_t = requires_expr<viewable_range<T>,decltype(all(DCLV(T)))>;
 } // views
-
 //[range.copy]
 ST copy_fn {
     TP<CL I, CL S, CL O, CL P>
@@ -915,20 +896,20 @@ ST transform_view { private:
         using reference = invoke_result_t<F&, range_reference_t<B>>;
         using pointer = void;
         CEXP it(Pa& pa, iterator_t<B> cur) : pa_(addressof(pa)), cur_(cur) {}
-        LazyReq(V, C && convertible_to<iterator_t<VV>, iterator_t<B>>) CEXP it(it<!C> i) : cur_(move(i.cur_)), pa_(i.pa_) {}
+        LazyT(V, C && convertible_to<iterator_t<V>, iterator_t<B>>) CEXP it(it<!C> i) : cur_(move(i.cur_)), pa_(i.pa_) {}
         CEXP const auto& base() const & RET(cur_)
         CEXP auto base() && RET(move(cur_))
         DCLT(auto) COP *() const RET( my_invoke(*pa_->fun_, *cur_) )
         DCLT(auto) COP ++() { ++cur_; return *this; }
         auto COP ++(int) { if CEXP (forward_range<B>) DefSuffix(++) else ++cur_; }
-        LazyReq(B, bidirectional_range<BB>) DCLT(auto) COP --() { --cur_; return *this; }
-        LazyReq(B, bidirectional_range<BB>) auto COP --(int) DefSuffix(--)
-#define TMPR LazyReq(B,random_access_range<BB>)
+        LazyT(B, bidirectional_range<B>) DCLT(auto) COP --() { --cur_; return *this; }
+        LazyT(B, bidirectional_range<B>) auto COP --(int) DefSuffix(--)
+#define TMPR LazyT(B,random_access_range<B>)
         TMPR DCLT(auto) COP +=(D_Ty n) { cur_ += n; return *this; }
         TMPR DCLT(auto) COP -=(D_Ty n) { cur_ -= n; return *this; }
         TMPR DCLT(auto) COP [](D_Ty n) const RET( *(cur_ + n) )
 #define Def(OP) bool FCOP OP cst_ref RET( i.cur_ OP j.cur_ )
-        LazyReq(B,equality_comparable<iterator_t<BB>>) Def(==) LazyReq(B,equality_comparable<iterator_t<BB>>) Def(!=)
+        LazyT(B,equality_comparable<iterator_t<B>>) Def(==) LazyT(B,equality_comparable<iterator_t<B>>) Def(!=)
         TMPR Def(<) TMPR Def(>) TMPR Def(<=) TMPR Def(>=)
 #undef Def
         TMPR auto FCOP +(it i, D_Ty n) RET(i+=n)
@@ -938,7 +919,7 @@ ST transform_view { private:
         FCOP - cst_ref RET(i.cur_ - j.cur_)
         FC DCLT(auto) iter_move(const it& i) NOEXP( ranges::invoke(*pa_->fun_, *cur_) ) 
         { if CEXP (is_lvalue_reference_v<decltype(*i)>) return move(*i); return *i; }
-        LazyReq(B,indirectly_swappable<iterator_t<B>>) FC auto iter_swap cst_ref
+        LazyT(B,indirectly_swappable<iterator_t<B>>) FC auto iter_swap cst_ref
         NOEXP_RET( ranges::iter_swap(i.cur_, j.cur_) )
 #undef TMPR
     };
@@ -948,14 +929,14 @@ ST transform_view { private:
         using B = maybe_const<C, V>;
         sentinel_t<B> end_;
     public:
-        CEXP se(sentinel_t<B> end) : end_(move(end)) {}
-        LazyReq(V, C && convertible_to<sentinel_t<VV>, sentinel_t<B>>) CEXP se(se<!C> i) : end_(move(i.end_)){}
+        CEXP se(sentinel_t<B> end) : end_(move(end)){}
+        LazyT(V, C && convertible_to<sentinel_t<V>, sentinel_t<B>>) CEXP se(se<!C> i) : end_(move(i.end_)){}
         CEXP auto base() RET(end_)
         bool FCOP ==(const it<C>& i, const se& j) RET( i.base() == j.end_ )
         bool FCOP ==(const se& i, const it<C>& j) RET(j==i)
         bool FCOP !=(const it<C>& i, const se& j) RET(!(i==j))
         bool FCOP !=(const se& i, const it<C>& j) RET(j!=i)
-#define Def LazyReq(B,sized_sentinel_for<sentinel_t<BB>, iterator_t<BB>>) range_difference_t<B> FCOP - 
+#define Def LazyT(B,sized_sentinel_for<sentinel_t<B>, iterator_t<B>>) range_difference_t<B> FCOP - 
         Def (const it<C>& i, const se& j) RET( i.cur_ - j.end_ )
         Def (const se& i, const it<C>& j) RET( i.end_ - j.cur_ )
 #undef Def
@@ -967,18 +948,18 @@ public:
     CEXP transform_view(V base, F fun) : base_(move(base)), fun_(move(fun)) {}
     CEXP V base() const RET(base_)
     CEXP it<false> begin() RET( {*this, ::begin(base_)} )
-    LazyReq(V, range<const VV> && regular_invocable<const F&, range_reference_t<const VV>>)
+    LazyT(V, range<const V> && regular_invocable<const F&, range_reference_t<const V>>)
     CEXP it<true> begin() const RET({*this, ::begin(base_)})
     CEXP auto end() {
         if CEXP (common_range<V>) return it<false>{*this, ::end(base_)}; 
         else return se<false>{::end(base_)};
     }
-    LazyReq(V, range<const VV> && regular_invocable<const F&, range_reference_t<const VV>>) CEXP auto end() const {
+    LazyT(V, range<const V> && regular_invocable<const F&, range_reference_t<const V>>) CEXP auto end() const {
         if CEXP (common_range<V>) return it<true>{*this, ::end(base_)};
         else return se<true>{::end(base_)};
     }
-    LazyReq(V, sized_range<VV>) CEXP auto size() RET(::size(base_) )
-    LazyReq(V, sized_range<const VV>)CEXP auto size() const RET(::size(base_) )
+    LazyT(V, sized_range<V>) CEXP auto size() RET(::size(base_) )
+    LazyT(V, sized_range<const V>)CEXP auto size() const RET(::size(base_) )
 };
 TP<CL R, CL F> transform_view(R&&, F) -> transform_view<views::all_t<R>, F>;
 NP views {
@@ -1071,10 +1052,9 @@ public:
     CEXP auto end() const {
         if CEXP (is_same_v<W, B>) return I { b };
         else if CEXP (is_same_v<B, unreachable_sentinel_t>) return unreachable_sentinel;
-        else return S { b };    
+        else return S{b};
     }
-    LazyReq(W, same_as<WW, B> || (integral<W> && integral<B>) || sized_sentinel_for<B, W>)
-    CEXP auto size() const {
+    LazyT(W, same_as<W, B> || (integral<W> && integral<B>) || sized_sentinel_for<B, W>) CEXP auto size() const {
         if CEXP (is_integral_v<W> && is_integral_v<B>)
     return v < 0 ? b < 0 ? to_unsigned(-v) - to_unsigned(-b) : to_unsigned(b) + to_unsigned(-v) : to_unsigned(b) - to_unsigned(v);
         else return to_unsigned(b - v);
@@ -1124,7 +1104,7 @@ TP<CL... V> CL zip_view : public view_interface<zip_view<V...>> {
         using reference = tuple_or_pair<range_reference_t<Temp>...>;
         using D_Ty = common_type_t<range_difference_t<Temp>...>;
         using pointer = void;
-#define CurLazy(...) TpReq(auto N=sizeof...(V))(bool_v0<true, N> && (__VA_ARGS__))
+#define CurLazy(...) LazyV(sizeof...(V),__VA_ARGS__)
         CurLazy(C && (convertible_to<iterator_t<V>, iterator_t<Temp>> && ...))
         CEXP it(it<!C> i) : cur_(move(i.cur_)) {}
         auto COP*() const RET(tuple_transform([](auto& i)->DCLT(auto) RET(*i), cur_))
