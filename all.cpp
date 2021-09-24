@@ -766,16 +766,16 @@ public:
 TP<CL S, CL I>CL SB {
     using R=S&;
     R CEXP Se()RET(R(*this))R CEXP Se()const RET(R(*this))
-#define Def LazyT(S,ReqExpr(DCLV(t&).eq(DCLV(I&)))) bool FCOP
-    Def ==(const S&i,const I&j)RET(i.Se().eq(j))
-    Def !=(const S&i,const I&j)RET(!(i==j))
-    Def ==(const I&i,const S&j)RET(j==i)
-    Def !=(const I&i,const S&j)RET(!(i==j))
+#define P1 (const S&i,const I&j)RET
+#define P2 (const I&i,const S&j)RET 
+#define Def LazyT(S,ReqExpr(DCLV(t&).eq(DCLV(I&))))bool FCOP
+    Def==P1(i.Se().eq(j)) Def!=P1(!(i==j)) Def==P2(j==i) Def!=P2(!(i==j))
 #undef Def
 #define Def LazyT(S,ReqExpr(DCLV(t&).eq(DCLV(I&)))) auto FCOP-
-    Def (const S&i,const I&j)RET(i.Se().dif(j))
-    Def (const I&i,const S&j)RET(-(j-i))
+    Def P1(i.Se().dif(j)) Def P2(-(j-i))
 #undef Def
+#undef P1
+#undef P2
 };
 //[range.view]
 ST view_base{};
