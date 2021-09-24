@@ -752,8 +752,8 @@ public:
     LazyT(I,ra)D FCOP-Crefp(IB)RET(dif(i.It(),j.It()))
     LazyT(I,ra)DCLT(auto) COP[](D n)RET(*(*this+n).It())
 #define Def(Na,CR) ReqExpr(Na(DCLV(CR),DCLV(CR)))
-    LazyT(I,Def(eq,const t&))bool FCOP==Crefp(IB) RET(eq(i.It(),j.It()))
-    LazyT(I,Def(eq,const t&))bool FCOP!=Crefp(IB) RET(!(i==j))
+    LazyT(I,Def(eq,t&))bool FCOP==Crefp(IB) RET(eq(i.It(),j.It()))
+    LazyT(I,Def(eq,t&))bool FCOP!=Crefp(IB) RET(!(i==j))
 #define Deff LazyT(I,ra&&Def(lt,const t&))
     Deff bool FCOP<Crefp(IB) RET(lt(i.It(),j.It()))
     Deff bool FCOP>Crefp(IB) RET(j<i)
@@ -762,6 +762,20 @@ public:
 #undef Deff
 #undef Def
 #undef RT
+};
+TP<CL S, CL I>CL SB {
+    using R=S&;
+    R CEXP Se()RET(R(*this))R CEXP Se()const RET(R(*this))
+#define Def LazyT(S,ReqExpr(DCLV(t&).eq(DCLV(I&)))) bool FCOP
+    Def ==(const S&i,const I&j)RET(i.Se().eq(j))
+    Def !=(const S&i,const I&j)RET(!(i==j))
+    Def ==(const I&i,const S&j)RET(j==i)
+    Def !=(const I&i,const S&j)RET(!(i==j))
+#undef Def
+#define Def LazyT(S,ReqExpr(DCLV(t&).eq(DCLV(I&)))) auto FCOP-
+    Def (const S&i,const I&j)RET(i.Se().dif(j))
+    Def (const I&i,const S&j)RET(-(j-i))
+#undef Def
 };
 //[range.view]
 ST view_base{};
@@ -848,7 +862,6 @@ TP<CL W, CL B = unreachable_sentinel_t> CL iota_view : public view_interface<iot
     using Tg=conditional_t<advanceable<W>,random_access_iterator_tag,conditional_t<decrementable<W>, bidirectional_iterator_tag,
             conditional_t<incrementable<W>, forward_iterator_tag, input_iterator_tag>>>;
     using D=iter_difference_t<W>;
-    
     ST S; ST I : IB<I, Tg, D> {
     private:
         friend IB<I, Tg, D>;friend S; W v; 
@@ -870,12 +883,13 @@ TP<CL W, CL B = unreachable_sentinel_t> CL iota_view : public view_interface<iot
         CEXP explicit I(W v) : v(v) {}
         W COP*()const RET(v)
     };
-    ST S {
-        S()=default;CEXP explicit S(B b) : b(b) {}
-        bool FCOP ==(const I& x, const S& y) { return y._M_equal(x); }
-        typename I::D_Ty FCOP -(const I& x, const S& y) { return x.v - y.b; }
-        typename I::D_Ty FCOP -(const S& x, const I& y) { return -(y - x); }
-    private: CEXP bool _M_equal(const I& x) const { return x.v == b; } B b;
+    ST S : SB<S, I> {
+        S()=default;CEXP explicit S(B b):b(b) {}
+    private:
+        B b;
+        CEXP bool eq(const I&i)const RET(b==i.v)
+        LazyT(W, sized_sentinel_for<B, W>)CEXP bool dif(const I&i)const RET(b-i.v)
+        friend SB<S, I>;
     };
     W v; B b;
 public:
@@ -884,7 +898,7 @@ public:
     CEXP iota_view(type_identity_t<W> v, type_identity_t<B> b) : v(v), b(b) {}
     CEXP I begin() const { return I{v}; }
     CEXP auto end() const {
-        if CEXP (is_same_v<W, B>) return I { b };
+        if CEXP (is_same_v<W, B>) return I{b};
         else if CEXP (is_same_v<B, unreachable_sentinel_t>) return unreachable_sentinel;
         else return S{b};
     }
