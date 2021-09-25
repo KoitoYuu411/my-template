@@ -60,7 +60,7 @@ inline namespace my {
 #define IS_SAME(...) static_assert(same_as<__VA_ARGS__>);
 
 using NP std;
-using ull =  unsigned long long;
+using ull = uint64_t;
 NP pbds_detail { using NP __gnu_pbds;
 TP<CL T,CL V=null_type,CL C=less<>>using order_tree = tree<T, V, C, rb_tree_tag, tree_order_statistics_node_update>;
 } // pbds_detail
@@ -1516,7 +1516,7 @@ IC int inf = inf_v<int>;
 }
 
 inline NP md {
-TP<auto M = long(1e9 + 7)> ST B {
+TP<auto M = int64_t(1e9 + 7)> ST B {
 using L = decltype(M); L v;
 CEXP B(L x = 0) : v(x % M) {}
 TP<CL... T> using Q = enable_if_t<(is_integral_v<T> && ...), B>;
