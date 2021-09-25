@@ -60,7 +60,7 @@ inline namespace my {
 #define IS_SAME(...) static_assert(same_as<__VA_ARGS__>);
 
 using NP std;
-using ull = uint64_t;
+using ull =  unsigned long long;
 NP pbds_detail { using NP __gnu_pbds;
 TP<CL T,CL V=null_type,CL C=less<>>using order_tree = tree<T, V, C, rb_tree_tag, tree_order_statistics_node_update>;
 } // pbds_detail
@@ -1514,45 +1514,23 @@ IC double e = e_v<double>;
 IC double pi = pi_v<double>;
 IC int inf = inf_v<int>;
 }
-
-inline NP md {
-TP<auto M = int64_t(1e9 + 7)> ST B {
-using L = decltype(M); L v;
-CEXP B(L x = 0) : v(x % M) {}
-TP<CL... T> using Q = enable_if_t<(is_integral_v<T> && ...), B>;
-TP<CL I, CL = Q<I>> explicit COP I() const { return I(v); }
-COP int() const { return int(v); }
-using X=B&;
-X COP+=(B r) { v = (v + r.v) % M;return *this; }
-X COP-=(B r) { v = ((v - r.v) % M + M) % M; return *this; }
-X COP*=(B r) { v = (v * r.v) % M; return *this; }
-X COP/=(B r) { *this *= r.inv(); return *this; }
-#define Def(OP, OPE) B FCOP OP (B l, B r) { return l OPE r; } \
-TP<CL I> Q<I> FCOP OP (I l, B r) { return (B)l OPE r; } \
-TP<CL I> Q<I> FCOP OP (B l, I r) { return l OPE r; }
-Def(+, +=) Def(-, -=) Def(*, *=) Def(/, /=)
+TP<auto M=int64_t(1e9+7)>ST B{
+using L = decltype(M);L v;
+B()=default;CEXP B(L x):v(x%M) {}
+using X=B&;TP<CL...T>using Q=enable_if_t<(integral<T>&&...),B>;
+TpReq(CL I)(integral<I>&&!same_as<int,I>) explicit COP I()const{return I(v);}COP int()const{return int(v);}
+X COP+=(B r)RET_THIS(v-=M-r.v;if(v<0)v+=M;)X COP-=(B r)RET_THIS(v-=r.v;if(v<0)v+=M;)
+X COP*=(B r)RET_THIS((v+=r.v)%=M;)X COP/=(B r)RET(*this*=r.inv();)
+#define Def(OP, OPE) B FCOP OP(B l,B r)RET(l OPE r)TP<CL I>Q<I>FCOP OP (I l,B r)RET((B)l OPE r)TP<CL I>Q<I>FCOP OP (B l,I r)RET(l OPE r)
+Def(+,+=)Def(-,-=)Def(*,*=)Def(/,/=)
 #undef Def
-B COP+() const { return *this; }
-B COP-() const { return 0 - *this; }
-FC B inv(B x) { return x.inv(); }
-TP<CL I> Q<I> FC pow(B l, I r) { return l.pow(r); }
-CEXP B inv() const { return pow(M - 2); }
-TP<CL I> Q<I> CEXP pow(I r) const 
-{ B b = *this, x = 1; while (r) { if (r & 1) x *= b; b *= b; r /= 2; } return x; }
-TP<CL L, CL R> Q<L, R> static CEXP pow(L l, R r) { return B(l).pow(r); }
-TP<CL I> Q<I> static fac(I r) {
-static unordered_map<I, B> f{{0, 1}};
-if (auto i = f.find(r); i != end(f)) return i->second;
-return f[r] = r * fac(r - 1);
-}
-TP<CL I> Q<I> static comb(I x, I y) { return fac(x) / fac(y) / fac(x - y); }
-X COP ++() { return *this += 1; }
-X COP --() { return *this -= 1; }
+B COP+()const RET_THIS()B COP-()const RET(0 - *this)X COP++()RET(*this+=1)X COP--()RET(*this-=1)
+TP<CL I>Q<I>CEXP pow(I r)const{B b=*this,x=1;while(r){if(r&1)x*=b;b*=b;r/=2;}return x;}TP<CL I>Q<I>FC pow(B l, I r)RET(l.pow(r))
+TP<CL L,CL R>Q<L, R>static CEXP pow(L l, R r)RET(B(l).pow(r))FC B inv(B x)RET(x.inv())CEXP B inv()const RET(pow(M - 2))
+TP<CL I>Q<I>static fac(I r){static unordered_map<I, B>f{{0,1}};if(auto i=f.find(r);i!=end(f))return i->second;return f[r]=r*fac(r-1);}
+TP<CL I>Q<I>static comb(I x,I y)RET(fac(x)/fac(y)/fac(x-y))
 };
-TP<auto M>using basic_mod = B<M>;  using mod = B<>;
-inline mod COP ""_m(ull x) { return mod(x); }
-}
-
+TP<auto M>using basic_mod=B<M>;using mod=B<>;using modint=B<int(1e9+7)>;inline mod COP ""_m(ull x)RET(mod(x))
 inline NP unionfind {
 CL UF {
 vector<int> fa, sz;
