@@ -1290,7 +1290,6 @@ Def(CL,xfn) Def(TPP,yfn)
 TP<CL C,CL... A>CEXP auto to(A&&...a)DCLT_RET( to_::to<C>(FWD(a)...,tag<1>{}) )
 TP<TPP C,CL... A>CEXP auto to(A&&...a)DCLT_RET( to_::to<C>(FWD(a)...,tag<1>{}) )
 } // ranges
-
 NP print {
 TP<CL T>ST brac{T l,r;};TP<CL T>brac(T,T)->brac<T>;TP<CL T>ST delim{T d;}; TP<CL T>delim(T)->delim<T>;
 TP<CL O,CL B>ST ob_br{using fmt=void;O&o;B b;};TP<CL O,CL D>ST ob_de{using fmt=void;O&o;D d;};
@@ -1310,12 +1309,11 @@ TP<CL O,CL B,CL D>ob_dr_de<O,brac<B>,delim<D>>COP/(ob_br<O,brac<B>>ob,delim<D>d)
 TP<CL O,CL B,CL D>ob_dr_de<O,brac<B>,delim<D>>COP/(delim<D>d,ob_br<O,brac<B>>ob)RET({ob.o,ob.b,d})
 TP<CL O,CL B,CL D>ob_dr_de<O,brac<B>,delim<D>>COP/(ob_de<O,delim<D>>od,brac<B>b)RET({od.o,b,od.d})
 TP<CL O,CL B,CL D>ob_dr_de<O,brac<B>,delim<D>>COP/(brac<B>b,ob_de<O,delim<D>>od)RET({od.o,b,od.d})
-TP<CL T>DCLT(auto) fmt(T&& t) {
-if CEXP(is_convertible_v<T,string_view>)return quoted(string_view(t));
-else if CEXP(is_same_v<decay_t<T>,char>)return quoted(string_view{&t,1},'\'');
-else return static_cast<T&&>(t);
+TP<CL T>DCLT(auto)fmt(T&& t){
+if CEXP(is_convertible_v<T,string_view>)RET(quoted(string_view(t)))
+else if CEXP(is_same_v<decay_t<T>,char>)RET(quoted(string_view{&t,1},'\''))else RET(FWD(t))
 }
-TP<CL S,CL D>CEXP S& put_delim(S&s,BL f,D d){if(!f)s<<d.d<<' ';return s;}
+TP<CL S,CL D>CEXP S&put_delim(S&s,BL f,D d){if(!f)s<<d.d<<' ';return s;}
 ConceptDef(has_del,CL T)(T t)(t.d,);TP<CL T>concept has_del=ConceptRef(has_del,T);
 ConceptDef(has_bra,CL T)(T t)(t.b,);TP<CL T>concept has_bra=ConceptRef(has_bra,T);
 //decl
@@ -1329,8 +1327,7 @@ TP<CL S,CL T,CL=typename tuple_size<remove_cvref_t<T>>::type>void impl(S&s,T&&t,
 //op
 TP<CL Ch,CL Tr,CL T>auto operator<<(basic_ostream<Ch,Tr>&s,T&&t)DCLT_RET(impl(s,t,tag<6>{}),s)
 //impl
-#define DEF auto d=[&]{if CEXP(has_del<WW>)return w.d;else return default_delim;};\
-auto b=[&]{if CEXP(has_bra<WW>)return w.b;else return default_brac;};
+#define DEF auto d=[&]{if CEXP(has_del<WW>)return w.d;else return default_delim;};auto b=[&]{if CEXP(has_bra<WW>)return w.b;else return default_brac;};
 #define MSeq make_index_sequence<tuple_size_v<remove_cvref_t<T>>>{}
 TP<CL S,CL T,CL B,CL D,size_t... I>
 void T_impl(S&s,T&&t,index_sequence<I...>,B b,D d){Raii _{s,b};((put_delim(s,I==0,d)<<fmt(get<I>(t))),...);  }
@@ -1341,34 +1338,25 @@ TP<CL S,CL R,CL>void impl(S&s,R&&r,tag<1>){R_impl(s,FWD(r),default_brac,default_
 TP<CL S,CL T,CL>void impl(S&s,T&&t,tag<0>){T_impl(s,t,MSeq,default_brac,default_delim);}
 #undef MSeq
 #undef DEF
-}
+}//print
 using print::operator<<,print::et,print::ebra;
 NP safe {
+#define DEF using T=remove_reference_t<TT>;using U=remove_reference_t<UU>;
 static CEXP int ulp=2;
 TP<CL... T>using limits=numeric_limits<common_type_t<T...>>;
-TP<CL TT,CL UU>IC BL eq(TT&& t,UU&& u) {
-using T=remove_reference_t<TT>; using U=remove_reference_t<UU>;
-if CEXP (is_integral_v<T>&& is_integral_v<U>) {
-if CEXP (is_signed_v<T> ==is_signed_v<U>) return t==u;
-else if CEXP (is_signed_v<T>) return t<0 ? false : to_unsigned(t)==u;
-else return u<0 ? false : t==to_unsigned(u);
-} else if CEXP (is_floating_point_v<U>|| is_floating_point_v<T>) {
-auto const x=abs(t-u); return x<=limits<T,U>::epsilon()*ulp || x<limits<T,U>::min();
-} else return t==u;
+TP<CL TT,CL UU>IC BL eq(TT&&t,UU&&u){DEF
+if CEXP(is_integral_v<T>&&is_integral_v<U>)
+{if CEXP(is_signed_v<T> ==is_signed_v<U>)RET(t==u)else if CEXP (is_signed_v<T>)RET(t<0?false:to_unsigned(t)==u)else RET(u<0?false:t==to_unsigned(u))}
+else if CEXP(is_floating_point_v<U>||is_floating_point_v<T>){auto x=abs(t-u); return x<=limits<T,U>::epsilon()*ulp || x<limits<T,U>::min();}
+else RET(t==u)
 }
-TP<CL TT,CL UU>IC BL lt(TT&& t,UU&& u) {
-using T=remove_reference_t<TT>; using U=remove_reference_t<UU>;
-static_assert(is_floating_point_v<T>|| is_floating_point_v<U>);
-if CEXP (is_integral_v<T>&& is_integral_v<U>) {
-if CEXP (is_signed_v<T> ==is_signed_v<U>)   return t<u;
-else if CEXP (is_signed_v<T>) return t<0 ? true : to_unsigned(t)<u;
-else return u<0 ? false : t<to_unsigned(u);
-} else if CEXP (is_floating_point_v<T>|| is_floating_point_v<U>) {
-return eq(t,u) ? false : t<u;
-} else 
-return t<u;
+TP<CL TT,CL UU>IC BL lt(TT&&t,UU&&u){DEF
+if CEXP (is_integral_v<T>&& is_integral_v<U>)
+{ if CEXP(is_signed_v<T> ==is_signed_v<U>)RET(t<u)else if CEXP(is_signed_v<T>)RET(t<0?true:to_unsigned(t)<u)else RET(u<0?false:t<to_unsigned(u))}
+else if CEXP(is_floating_point_v<T>||is_floating_point_v<U>)RET(eq(t,u)?false:t<u)
+else return t<u;
 }
-
+#undef DEF
 TP<CL T>CL sf { 
 T v={};
 public:
@@ -1474,15 +1462,13 @@ IC auto set_fast_io=[] {
 ios::sync_with_stdio(false); cin.tie(nullptr); cout.tie(nullptr); cout << setprecision(12); return 0;
 };
 } // init
+#define INSIDE_STD TP<CL... A>CEXP void swap(const tuple<A...>& i,const tuple<A...>& j){Rg tfe_(Rg swap,i,j);}\
+TP<CL>concept is_vv=false;TP<CL T>concept is_vv<vector<T>> =true;\
+TP<CL T>ST tuple_size<vector<T>>:integral_constant<size_t,vector_size_v>{};\
+TP<size_t I,CL T>ST tuple_element<I,vector<T>>:enable_if<true,T>{};\
+TpReq(size_t I,CL T)(is_vv<remove_cvref_t<T>>)DCLT(auto)get(T&&t)RET(FWD(t)[I])
 } // my
-NP std {
-TP<CL... A>CEXP void swap(const tuple<A...>& i,const tuple<A...>& j){Rg tfe_(Rg swap,i,j);}
-TP<CL>concept is_vector_v=false; TP<CL T>concept is_vector_v<vector<T>> =true;
-TP<CL T>ST tuple_size<vector<T>>: integral_constant<size_t,vector_size_v>{};
-TP<size_t I,CL T>ST tuple_element<I,vector<T>>: enable_if<true,T>{};
-TP<size_t I,CL T,requires_expr<is_vector_v<decay_t<T>>> =0>
-DCLT(auto) get(T&& t) { return FWD(t)[I]; }
-} // std
+NP std {INSIDE_STD} // std
 inline NP simplify {
 #define Yc Y_combinator
 NP rg=ranges; NP vw=Rg views;
