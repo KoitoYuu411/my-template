@@ -9,3 +9,10 @@ IS_SAME(TY indirectly_readable_traits<const int*const >::value_type, int)
 IS_SAME(TY indirectly_readable_traits<X>::value_type, int)
 IS_SAME(TY indirectly_readable_traits<vector<int>::iterator>::value_type, int)
 IS_SAME(TY indirectly_readable_traits<Y>::value_type, int)//failed
+
+  
+//[indirectly_readable]
+static_assert(indirectly_readable<shared_ptr<int>>);
+static_assert(indirectly_readable<int const*const>);
+static_assert(indirectly_readable<vector<bool>::iterator>);
+// static_assert(indirectly_readable<optional<int>>); // fail
