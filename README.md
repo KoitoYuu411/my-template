@@ -35,4 +35,4 @@ template<class In>
 template<class In>
   concept indirectly_­readable =
     indirectly-readable-impl<remove_cvref_t<In>>;
-    ```
+```
