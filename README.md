@@ -16,3 +16,23 @@ concept swappable = requires(T&& t, U&& u) {
     my_swap(std::forward<T>(t), std::forward<U>(u);
 };
 ```
+
+
+
+```
+template<class In>
+  concept indirectly-readable-impl =
+    requires(const In in) {
+      typename iter_value_t<In>;
+      typename iter_reference_t<In>;
+      typename iter_rvalue_reference_t<In>;
+      { *in } -> same_­as<iter_reference_t<In>>;
+      { ranges::iter_move(in) } -> same_­as<iter_rvalue_reference_t<In>>;
+    } &&
+    common_­reference_­with<iter_reference_t<In>&&, iter_value_t<In>&> &&
+    common_­reference_­with<iter_reference_t<In>&&, iter_rvalue_reference_t<In>&&> &&
+    common_­reference_­with<iter_rvalue_reference_t<In>&&, const iter_value_t<In>&>;
+template<class In>
+  concept indirectly_­readable =
+    indirectly-readable-impl<remove_cvref_t<In>>;
+    ```
