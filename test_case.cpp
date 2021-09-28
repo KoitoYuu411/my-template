@@ -1,3 +1,4 @@
+#define IS_SAME(...) static_assert(same_as<__VA_ARGS__>);
 //[indirectly_readable_traits]
 struct X{using value_type = int; using element_type=int;};
 struct Y{using value_type = int; using element_type=float;};
