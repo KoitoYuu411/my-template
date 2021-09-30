@@ -10,6 +10,15 @@ debug(x|Rg fold(0)) // returns 2.4
 debug(x|Rg fold(0,{},Rg abs)); //return 8.4
 debug(x|Rg fold(1,multiplies{})); //return -13.2
 ```
+## to
+```
+set_pmr();
+using A=pmr::polymorphic_allocator<int>;
+auto c = 676|fac|to<vector>(A{});
+static_assert(is_same_v<decltype(c),pmr::vector<int>>);
+return {};
+```
+
 Vw XXX means views::XXX
 ## views
 
