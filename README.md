@@ -1,7 +1,6 @@
 # my-template
-## ranges
+# ranges
 Rg XXX means ranges::XXX
-
 ## algorithms
 ### Rg fold
 #### demo
@@ -11,6 +10,8 @@ debug(x|Rg fold(0)) // returns 2.4
 debug(x|Rg fold(0,{},Rg abs)); //return 8.4
 debug(x|Rg fold(1,multiplies{})); //return -13.2
 ```
+Vw XXX means views::XXX
+## views
 
 ## Macros
 ### ConceptDef
