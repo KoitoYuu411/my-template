@@ -1,6 +1,19 @@
 # my-template
+## ranges
+Rg XXX means ranges::XXX
 
-## ConceptDef
+## algorithms
+### Rg fold
+#### demo
+```cpp
+vector x={1.0,-3.0,4.4};
+debug(x|Rg fold(0)) // returns 2.4
+debug(x|Rg fold(0,{},Rg abs)); //return 8.4
+debug(x|Rg fold(1,multiplies{})); //return -13.2
+```
+
+## Macros
+### ConceptDef
 ```cpp
 TP<CL T>concept swappable=ConceptRef(swappable,T);
 ConceptDef(swappable_with,CL T,CL U)(T&& t,U&& u) (
