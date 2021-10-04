@@ -68,7 +68,7 @@ inline NP my{
 #define RET_THIS(...) { __VA_ARGS__ return*this;}
 #define DefSuffix(OP) {auto a=*this;OP*this;return a;}
 #define Crefp(T)(const T&i,const T&j)
-#define MakeAuto(Na,__VA_ARGS__) Na<decay_t<DCLT(__VA_ARGS__)>>(__VA_ARGS__)
+#define MakeAuto(Na,...) Na<decay_t<DCLT(__VA_ARGS__)>>(__VA_ARGS__)
 //[traits]
 #define rmv_r_t remove_reference_t
 
@@ -877,9 +877,9 @@ using my::ranges::get;
 #undef Body
 
 
-#define In_Vws(...) NP views {__VA_ARGS__}
-#define Def_Vw_Adp(Name) InVws(IC raco Name=[](auto&&...a)NOEXP_DCLT_RET(Name##_view{FWD(a)...});)
-#define Def_Vw_Adp_(X,...) InVws(IC raco X=__VA_ARGS__;)
+#define In_Vws(...) NP views{__VA_ARGS__}
+#define Def_Vw_Adp(Name) In_Vws(IC raco Name=[](auto&&...a)NOEXP_DCLT_RET(Name##_view{FWD(a)...});)
+#define Def_Vw_Adp_(X,...) In_Vws(IC raco X=__VA_ARGS__;)
 inline NP my{
 NP ranges{
 //[single.view]
@@ -982,8 +982,8 @@ private:R r_;
 Def_Vw_Adp_(all,first_of(
     [](auto&&r)NOEXP_DCLT_RET(Reqs(view<rmv_cvr_t<DCLT(r)>>)decay_copy(FWD(r))),
     [](auto&&r)NOEXP_DCLT_RET(ref_view{FWD(r)}),[](auto&&r)NOEXP_DCLT_RET(owning_view{FWD(r)})
-)
-In_Vws(TP<CL T>using all_t=DCLT(all(DCLV(T))))
+))
+In_Vws(TP<CL T>using all_t=DCLT(all(DCLV(T)));)
 //[range.copy]
 ST copy_fn {
 TP<CL I,CL S,CL O,CL P>
@@ -1292,42 +1292,37 @@ public:CEXP decompose_view(T t)noexcept:t(t){}
 CEXP I begin() const noexcept RET({t})CEXP df_t end()const noexcept RET({})
 };
 Def_Vw_Adp(decompose)
-NP to_ {
-TP<CL R>using proxy_iter=istream_iterator<rv_t<R>>;
-TP<CL C,CL R,CL... A>auto IC impl(tag<4>,R&&r,A&&...a)DCLT_RET(C(FWD(r),FWD(a)...))
-TP<CL C,CL R,CL... A>auto IC impl(tag<3>,R&&r,A&&...a)DCLT_RET(C(begin(r),end(r),FWD(a)...))
-//[todo] maybe_simplify
-TP<CL Ref,CL C>auto IC get_inserter(C& c,tag<1>)->DCLT(c.push_back(DCLV(Ref)),back_inserter(c)) { return back_inserter(c); }
-TP<CL Ref,CL C>auto IC get_inserter(C& c,tag<0>)->DCLT(c.insert(end(c),DCLV(Ref)),inserter(c,end(c))) { return inserter(c,end(c)); }
-CpDef(can_reserve,CL C)(C& c,size_t n)(
+
+CpDef(can_reserve,CL C)(C&c,size_t n)(
 c.reserve(n),
 Cret(same_as,c.max_size())(DCLT(c.size()))
 Cret(same_as,c.capacity())(DCLT(c.size()))
 );
 TP<CL C>concept can_reserve=CpRef(can_reserve,C);
-TP<CL C,CL R,CL... A>auto IC impl(tag<1>,R&&r,A&&...a)->decltype(get_inserter<rr_t<R>>(DCLV(C&),tag<1>{}),C(FWD(a)...)) {
-auto c=C(FWD(a)...);
-if CEXP(sz_rg<R>&&can_reserve<C>)c.reserve(size(r));
-Rg copy(r,get_inserter<rr_t<R>>(c,tag<1>{}));
-return c;
-}
+TP<CL R>using proxy_iter=istream_iterator<rv_t<R>>;
 TP<TPP C,CL R,CL... A>using Cont=decltype(C(proxy_iter<R>(),proxy_iter<R>(),DCLV(A)...));
-TpReq(CL C,CL R,CL...A)(range<R>)CEXP auto To(tag<1>,R&&r,A&&...a)DCLT_RET(impl<C>(tag<5>{},FWD(r),FWD(a)...))
-TpReq(TPP C,CL R,CL...A)(range<R>)CEXP auto To(tag<1>,R&&r,A&&...a)DCLT_RET(impl<Cont<C,R,A...>>(tag<5>{},FWD(r),FWD(a)...))
-#define Def(TMP,NAME) \
-TP<TMP C,CL... A>ST NAME{tuple<A...>pa;\
-TP<CL R>auto COP()(R&&r)const&->DCLT(To<C>(tag<1>{},DCLV(R),DCLV(const A&)...))\
-RET(apply([&](auto&&...a)RET(To<C>(tag<1>{},(R&&)r,FWD(a)...)),pa))\
-TP<CL R>auto COP()(R&&r)&&->DCLT(To<C>(tag<1>{},DCLV(R),DCLV(A)...))\
-RET(apply([&](auto&&...a)RET(To<C>(tag<1>{},(R&&)r,FWD(a)...)),move(pa)))\
-TpReq(CL R,CL F)(same_as<NAME,rmv_cvr_t<F>>)auto FCOP|(R&&r,F&&f) DCLT_RET(FWD(f)(FWD(r)))\
-};\
-TP<TMP C,CL... A>CEXP auto To(tag<0>,A&&...a)RET(NAME<C,decay_t<A>...>{FWD(a)...})
-Def(CL,xfn)Def(TPP,yfn)
-#undef Def
-}//to_
-TP<CL C,CL... A>CEXP auto to(A&&...a)DCLT_RET(to_::To<C>(tag<1>{},FWD(a)...))
-TP<TPP C,CL... A>CEXP auto to(A&&...a)DCLT_RET(to_::To<C>(tag<1>{},FWD(a)...))
+TP<CL C>struct to_{
+TP<CL E>ST ins_{
+SAC get=first_of(
+[](auto&c)NOEXP_DCLT_RET(ReqExpr(c.push_back(DCLV(E))),back_inserter(c)),
+[](auto&c)NOEXP_DCLT_RET(ReqExpr(c.insert(end(c),DCLV(E))),inserter(c,end(c)))
+);
+};
+SAC impl=first_of(
+[](auto&&r,auto&&...a)NOEXP_DCLT_RET(C(FWD(r),FWD(a)...)),
+[](auto&&r,auto&&...a)NOEXP_DCLT_RET(C(begin(r),end(r),FWD(a)...)),
+[](auto&&r,auto&&...a)NOEXP_DCLT(ins_<rr_t<DCLT(r)>>::get(DCLV(C)))
+{using R=DCLT(r);auto c=C(FWD(a)...);if CEXP(sz_rg<R>)if CEXP(can_reserve<C>)c.reserve(size(r));Rg copy(r,ins_<rr_t<R>>::get(c));return c;}
+);
+//[bug?]
+SC raco fn=impl;
+};
+TP<TPP C>ST to_tp{
+SC ST Impl{TP<CL R,CL...A>auto COP()(R&&r,A&&...a)NOEXP_DCLT_RET(to_<Cont<C,R,A...>>::impl(FWD(r),FWD(a)...))}impl;
+SC raco fn=impl;
+};
+TP<CL C,CL... A>CEXP auto to(A&&...a)DCLT_RET(to_<C>::fn(FWD(a)...))
+TP<TPP C,CL... A>CEXP auto to(A&&...a)DCLT_RET(to_tp<C>::fn(FWD(a)...))
 }//ranges
 NP print {
 TP<CL T>ST brac{T l,r;};TP<CL T>brac(T,T)->brac<T>;TP<CL T>ST delim{T d;};TP<CL T>delim(T)->delim<T>;
