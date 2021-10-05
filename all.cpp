@@ -66,6 +66,7 @@ NP std {
 #define ImplCpBl0(...) Req(__VA_ARGS__); }
 #define Creq Reqs
 #define ImplCret(...) ,##__VA_ARGS__>>{},
+#define Cret1(Na,...) requires_expr<Na<DCLT(__VA_ARGS__)>>{},
 #define Cret(Na,...) requires_expr<Na<DCLT(__VA_ARGS__) ImplCret
 #define CpRef(NAME,...) requires_<NAME##_concept,__VA_ARGS__>
 
@@ -76,7 +77,7 @@ NP std {
 //[traits]
 #define rmv_r_t remove_reference_t
 
-#define TypeInner(In,__VA_ARGS__) TY rmv_cvr_t<__VA_ARGS__>::In
+#define TypeInner(In,...) TY rmv_cvr_t<__VA_ARGS__>::In
 
 TP<CL T>ST ty_id{using type=T;};
 TP<CL T>using ty_id_t=TY ty_id<T>::type;
@@ -251,24 +252,29 @@ def_all(call,first_of)
 #define Bind(Na,...) TP<CL F,CL...T>ST Na{TpReq(CL X,CL...Y)(!same<Na,X>)Na(X&&x,Y&&...y):f(FWD(x)),a(FWD(y)...){}\
 TP<CL S,CL...X,CL FF=F>SAC call(S&&s,X&&...x)noexcept(is_nothrow_invocable_v<like_t<FF,S&&>,X...,T...>)\
 ->inv_res_t<like_t<FF,S&&>,X...,T...>RET(apply([&](auto&&...a)RET(Rg invoke(FWD(s).f,__VA_ARGS__)),FWD(s).a))def_all(call,Na)\
-private:F f;tuple<T...>a;};TP<CL F,CL...A>Na(F,A...)->Na<F,A...>;
+private:NUA F f;NUA tuple<T...>a;};TP<CL F,CL...A>Na(F,A...)->Na<F,A...>;
 Bind(bindF,FWD(a)...,FWD(x)...)Bind(bindB,FWD(x)...,FWD(a)...)
+
+
 #undef Bind
 TP<CL L,CL R>ST compose{
 TP<CL X,CL Y>compose(X&&l,Y&&r):l(FWD(l)),r(FWD(r)){}
 TP<CL S,CL...A>SAC call(S&&s,A&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(s).r,Rg invoke(FWD(s).l,FWD(a)...)))def_all(call,compose)
 private:L l;R r;};
 TP<CL L,CL R>compose(L,R)->compose<L,R>;
+TP<CL F>ST raco;
+TP<CL X>raco(X)->raco<X>;
+auto make_raco=[](auto&&x)NOEXP_DCLT_RET(raco(FWD(x)));
 TP<CL F>ST raco{using Raco=raco;TP<CL>friend ST raco;raco()=default;TpReq(CL X)(!same<X,raco>)CEXP raco(X&&x):f(FWD(x)){}
 SAC __pip__=first_of([](auto&&l,auto&&r)NOEXP_DCLT_RET(Rg invoke(FWD(r),FWD(l))),[](auto&&l,auto&&r)NOEXP_DCLT_RET(compose(FWD(l),FWD(r))));
-TpReq(CL L,CL R)(ReqType(TypeInner(Raco,L),TypeInner(Raco,R)))SAC pip(L&&l,R&&r)NOEXP_DCLT_RET(MakeAuto(raco,__pip__(FWD(l).f,FWD(r).f)))
+TpReq(CL L,CL R)(ReqType(TypeInner(Raco,L),TypeInner(Raco,R)))SAC pip(L&&l,R&&r)NOEXP_DCLT_RET(make_raco(__pip__(FWD(l).f,FWD(r).f)))
 SAC test=[](auto&&r,auto&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(r).f,FWD(a)...));
 SAC call=first_of([](auto&&r,auto&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(r).f,FWD(a)...)),
-[](auto&&r,auto&&...a)NOEXP_DCLT_RET(MakeAuto(raco,bindB(FWD(r).f,FWD(a)...))));
-SAC sub=[](auto&&r,auto&&i)NOEXP_DCLT_RET(MakeAuto(raco,bindF(FWD(r).f,FWD(i))));
+[](auto&&r,auto&&...a)NOEXP_DCLT_RET(make_raco(bindB(FWD(r).f,FWD(a)...))));
+SAC sub=[](auto&&r,auto&&i)NOEXP_DCLT_RET(make_raco(bindF(FWD(r).f,FWD(i))));
 def_all(sub,raco)def_all(call,raco)
 private:F f;};
-TP<CL X>raco(X)->raco<X>;
+
 CpDef(is_raco,CL T)(TY T::Raco)();TP<CL T>concept is_raco=CpRef(is_raco,T);
 CPO pipeline=first_of(
     [](auto&&l,auto&&r)DCLT_RET(l.pip(FWD(l),FWD(r))),
@@ -341,9 +347,9 @@ Reqs(com_ref_with<T,U>)
 Rg swap(FWD(t),FWD(t)),Rg swap(FWD(u),FWD(u)),Rg swap(FWD(t),FWD(u)),Rg swap(FWD(u),FWD(t)),
 );
 TP<CL T>concept bool_ts_impl=conv_to<T,bool>;
-CpDef(bool_ts,CL T) (T&&t)(Cret(bool_ts_impl,!FWD(t))());
+CpDef(bool_ts,CL T) (T&&t)(Cret1(bool_ts_impl,!FWD(t)));
 TP<CL T>concept boolean_testable=bool_ts_impl<T>&&CpRef(bool_ts,T);
-#define BLT(...) Cret(boolean_testable,__VA_ARGS__)()
+#define BLT(...) Cret1(boolean_testable,__VA_ARGS__)
 CpDef(weakly_eq_cmp_with,CL T,CL U)(const rmv_r_t<T>&t,const rmv_r_t<U>&u)
 (BLT(t==u)BLT(t!=u)BLT(u==t)BLT(u!=t));
 TP<CL T,CL U>concept weakly_eq_cmp_with=CpRef(weakly_eq_cmp_with,T,U);
@@ -634,7 +640,7 @@ TP<CL I,CL S,CL C,CL P>SAC impl(I f,S l,C c,P p){iv_t<I>r=*f;proj_cmp w={c,p};wh
 TpReq(CL R,CL C=less,CL P=identity)(range<R>)auto COP()(R&&r,C c={},P p={})const RET(impl(begin(r),end(r),move(c),ref(p)))
 TP<CL T,CL C=less,CL P=identity>auto COP()(initializer_list<T>r,C c={},P p={})const RET(impl(begin(r),end(r),move(c),ref(p)))
 TP<CL T,CL U,CL C=less,CL P=identity>auto COP()(T&&t,U&&u,C c={},P p={})const
-NOEXP_DCLT_RET((proj_cmp(ref(c),ref(p)))(t,u)?com_ref_t<T&&,U&&>(FWD(t)):com_ref_t<T&&,U&&>(FWD(u)))
+NOEXP_DCLT_RET(Rg invoke(c,Rg invoke(p,t),Rg invoke(p,u))?com_ref_t<T&&,U&&>(FWD(t)):com_ref_t<T&&,U&&>(FWD(u)))
 };
 IC raco min=min_fn{};
 auto abs=[](auto x)RET(::abs(x));
@@ -745,16 +751,17 @@ TP<CL I>concept has_arrow=ip_i<I>&&(is_pointer_v<I>|| CpRef(has_arrow,I));
 TP<CL T,CL U>concept different_from=!same_as<rmv_cvr_t<T>,rmv_cvr_t<U>>;
 ST dangling { dangling()noexcept=default;TP<CL...A>dangling(A&&...){} };
 TP<CL T>ST box_:optional<T>{
-using optional<T>::optional;
+using P=optional<T>;
+using P::optional;
 LazyT(T,!df_init<T>) box_()=delete;
 LazyT(T,df_init<T>)CEXP box_()noexcept(is_nothrow_default_constructible_v<T>):optional<T>{in_place}{}
 box_(const box_&)=default;box_(box_&&)=default;
 box_&operator=(const box_&other)RET_THIS(
-if CEXP(assignable_from<T&,const T&>)this->TP optional<T>::operator=((const optional<T>&)other);
+if CEXP(assignable_from<T&,const T&>)this->P::operator=((const optional<T>&)other);
 else if (this!=addressof(other)){if(other)this->emplace(*other);else this->reset();}
 )
 box_& operator=(box_&&other)RET_THIS(
-if CEXP (assignable_from<T&,T>)this->TP optional<T>::operator=((optional<T>&&)(other));
+if CEXP (assignable_from<T&,T>)this->P::operator=((optional<T>&&)(other));
 else if (this!=addressof(other)) { if (other) this->emplace(move(*other)); else this->reset();} 
 )
 };
@@ -1205,7 +1212,7 @@ SAC impl=first_of(
 SC raco fn=impl;
 };
 TP<TPP C>ST to_tp{
-SC ST Impl{TP<CL R,CL...A>auto COP()(R&&r,A&&...a)NOEXP_DCLT_RET(to_<Cont<C,R,A...>>::impl(FWD(r),FWD(a)...))}impl;
+SC ST Impl{TP<CL R,CL...A>auto COP()(R&&r,A&&...a)NOEXP_DCLT_RET(to_<Cont<C,R,A...>>::impl(FWD(r),FWD(a)...))}impl{};
 SC raco fn=impl;
 };
 TP<CL C,CL... A>AC to(A&&...a)DCLT_RET(to_<C>::fn(FWD(a)...))
