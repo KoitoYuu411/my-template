@@ -2,8 +2,8 @@
 # ranges
 Rg XXX means ranges::XXX
 ## algorithms
-###Rg min
-####demo
+### Rg min
+#### demo
 ```cpp
 vector<string> nums={"3","2","45","13","100"};
 //different Min
