@@ -16,3 +16,15 @@ static_assert(indirectly_readable<shared_ptr<int>>);
 static_assert(indirectly_readable<int const*const>);
 static_assert(indirectly_readable<vector<bool>::iterator>);
 // static_assert(indirectly_readable<optional<int>>); // fail
+
+
+
+//[pipeline]
+raco max = [](auto&&a,auto&&b)RET(std::max(FWD(a),FWD(b)));
+auto l = vector {1,2,3} |= tran < raco(minus{}) % 3 | to<vector>();
+auto ret = INT_MIN;
+for (auto x : l) ret |= max(x);
+debug(ret)
+  
+  
+  
