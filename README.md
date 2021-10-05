@@ -10,7 +10,7 @@ vector<string> nums={"3","2","45","13","100"};
 Min(nums)// "100"
 Min(nums,greater{}) //"45"
 Min(nums,less{},Size)//"3"
-Min(nums,less{},[](auto x)RET(make_pair(Size(x),ref(x))))//"2"
+Min(nums,less{},[](auto&&x)RET(make_pair(Size(x),ref(x))))//"2"
 //mix-types
 long x=2;unsigned y=4;
 Min(x,y) //Returns long(2)
