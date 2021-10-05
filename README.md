@@ -2,6 +2,23 @@
 # ranges
 Rg XXX means ranges::XXX
 ## algorithms
+###Rg min
+####demo
+```cpp
+vector<string> nums={"3","2","45","13","100"};
+//different Min
+Min(nums)// "100"
+Min(nums,greater{}) //"45"
+Min(nums,less{},Size)//"3"
+Min(nums,less{},[](auto x)RET(make_pair(Size(x),ref(x))))//"2"
+//mix-types
+long x=2;unsigned y=4;
+Min(x,y) //Returns long(2)
+//Bind operator
+auto z=y|Min(x,less{},[&](auto&&i)RET(nums[i])); // equals to Min(y,x,less{},Lambda) Use nums[i] as key
+y|=Min(x);//equals to y=y|Min(x) -> y=Min(y,x)
+```
+
 ### Rg fold
 #### demo
 ```cpp
