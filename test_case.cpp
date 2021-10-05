@@ -25,6 +25,23 @@ auto l = vector {1,2,3} |= tran < raco(minus{}) % 3 | to<vector>();
 auto ret = INT_MIN;
 for (auto x : l) ret |= max(x);
 debug(ret)
+
+//[Min]
+vector<string> nums={"3","2","45","13","100"};
+//different Min
+debug(Min(nums))
+debug(Min(nums,greater{}))
+debug(Min(nums,less{},Size))
+debug(Min(nums,less{},[](auto x)RET(make_pair(Size(x),ref(x)))))
+//mix-types
+long x=2;unsigned y=4;
+debug(Min(x,y)) //Returns long(2)
+//Bind operator
+auto z=y|Min(x,less{},[&](auto&&i)RET(nums[i])); // equals to Min(y,x,less{},Lambda) Use nums[i] as key
+debug(z)
+y|=Min(x);//equals to y=y|Min(x) -> y=Min(y,x)
+debug(y)
+
   
   
   
