@@ -75,8 +75,10 @@ NP std {
 #define RET_THIS(...) { __VA_ARGS__ return*this;}
 #define DefSuffix(OP) {auto a=*this;OP*this;return a;}
 #define Crefp(T)(const T&i,const T&j)
+#define MakeAuto(Na,...) Na<decay_t<DCLT(__VA_ARGS__)>>(__VA_ARGS__)
 //[traits]
 #define rmv_r_t remove_reference_t
+
 #define TypeInner(In,...) TY rmv_cvr_t<__VA_ARGS__>::In
 
 TP<CL T>ST ty_id{using type=T;};
@@ -385,7 +387,7 @@ TP<CL R,CL T,CL U>concept relation=predicate<R,T,T>&&predicate<R,U,U>&&predicate
 CpDef(tplk,CL T)()(RetReq(same_as,size_t)(tuple_size_v<T>));//[todo]more
 TP<CL T>concept tuple_like=CpRef(tplk,T);
 //[traits]
-TP<CL T>using idx_tp=make_index_sequence<tuple_size_v<rmv_cvr_t<T>>>;
+TP<CL T>using idxT=make_index_sequence<tuple_size_v<rmv_cvr_t<T>>>;
 
 TP<CL F>ST Yc_{
 F f;
@@ -793,14 +795,15 @@ CpDef(has_arrow,CL I)(I i)(i.operator->(),);
 TP<CL I>concept has_arrow=ip_i<I>&&(is_pointer_v<I>|| CpRef(has_arrow,I));
 TP<CL T,CL U>concept different_from=!same_as<rmv_cvr_t<T>,rmv_cvr_t<U>>;
 ST dangling { dangling()noexcept=default;TP<CL...A>dangling(A&&...){} };
-//[box]
+//[wrappers]
+#define US using P=optional<T>;using P::optional;using P::reset;using P::operator=;
 #define DF box(const box&)=default;box(box&&)=default;
 TP<CL T,CL=int>ST box:optional<T>{
-using P=optional<T>;using P::optional;
+US
 LazyT(T,!df_init<T>)box()=delete;
 LazyT(T,df_init<T>)CEXP box()noexcept(is_nothrow_default_constructible_v<T>):optional<T>{in_place}{}
 #define AS(CV) box&operator=(box CV u)RET_THIS(\
-if CEXP(assignable_from<T&,T CV>)this->P::operator=((optional<T>CV)u);else if(this!=&u){if(u)this->emplace((T CV)*u);else this->reset();})
+if CEXP(assignable_from<T&,T CV>)P::operator=((optional<T>CV)u);else if(this!=&u){if(u)this->emplace((T CV)*u);else reset();})
 AS(&&)AS(const&)DF
 #undef AS
 };
@@ -808,8 +811,8 @@ TP<CL T>ST box<T,Req(copyable<T>||(is_nothrow_move_constructible_v<T>&&is_nothro
 EC box(const T&t)noexcept(is_nothrow_copy_constructible_v<T>):t(t){}
 EC box(T&&t)noexcept(is_nothrow_copy_constructible_v<T>):t(move(t)){}
 TpReq(CL...A)(cst_from<T,A...>)EC box(in_place_t,A&&...a)noexcept(is_nothrow_constructible_v<T,A...>):t(FWD(a)...){}
-box()=default;
-#define AS(CV) box&operator=(box CV r)noexcept RET_THIS(if CEXP(copyable<T>)t=(T CV)r.t;else if(this!=&r)t.~_Tp(),new(&t)T((T CV)*r);)
+box()=default;CEXP box&operator=(T z)RET_THIS(t=move(z);)
+#define AS(CV) box&operator=(box CV r)RET_THIS(if CEXP(copyable<T>)t=(T CV)r.t;else if(this!=&r)t.~T(),new(&t)T((T CV)*r);)
 AS(const&)AS(&&)DF
 #undef AS
 SC BL has_value()noexcept RET(1)
@@ -818,6 +821,15 @@ AX(&,*,,)AX(&,*,const,)AX(*,->,,&)AX(*,->,const,&)
 #undef AX
 private:T t;};
 #undef DF
+TP<CL T,CL=int>ST np_box{};
+TP<CL T>ST np_box<T,Req(is_object_v<T>)>:optional<T>{
+US
+CEXP np_box(const np_box&)noexcept{}
+CEXP np_box(np_box&& o)noexcept{o.reset();}
+CEXP np_box&operator=(const np_box&o)noexcept RET_THIS(if(&o!=this)reset();)
+CEXP np_box&operator=(np_box&&o)noexcept RET_THIS(reset();o.reset();)
+TP<CL I>T&emplace_deref(const I&i){reset();return this->emplace(*i);}
+};
 //[range.subrange]
 enum CL subrange_kind {sized,unsized};
 TP<CL From,CL To>concept conv_to_non_slicing=
@@ -1244,12 +1256,12 @@ SAC impl=first_of(
 //[bug?]
 SC raco fn=impl;
 };
-TP<TPP C>ST to_tp{
+TP<TPP C>ST toT{
 SC ST Impl{TP<CL R,CL...A>auto COP()(R&&r,A&&...a)NOEXP_DCLT_RET(to_<Cont<C,R,A...>>::impl(FWD(r),FWD(a)...))}impl{};
 SC raco fn=impl;
 };
 TP<CL C,CL... A>AC to(A&&...a)DCLT_RET(to_<C>::fn(FWD(a)...))
-TP<TPP C,CL... A>AC to(A&&...a)DCLT_RET(to_tp<C>::fn(FWD(a)...))
+TP<TPP C,CL... A>AC to(A&&...a)DCLT_RET(toT<C>::fn(FWD(a)...))
 }//ranges
 NP print {
 TP<CL T>ST brac{T l,r;};TP<CL T>brac(T,T)->brac<T>;TP<CL T>ST delim{T d;};TP<CL T>delim(T)->delim<T>;
@@ -1394,12 +1406,12 @@ return x0!=y0;
 }
 inline NP utility {
 CpDef(can_top,CL T)(T& t)(t.top(),);
-AC pop=[](auto&t){
+AC pop=[](auto& t) {
 using T=decay_t<DCLT(t)>;auto r=move((TY T::value_type&)[&]()->auto&&{if CEXP(CpRef(can_top,T))RET(t.top())else RET(t.front())}());
 t.pop();return r;
 };
 }//utility
-inline NP direction{
+inline NP direction {
 CEXP int dir [][2]{{0,1},{1,0},{0,-1},{-1,0}};
 CEXP int dir8[][2]{{0,1},{1,0},{0,-1},{-1,0},{1,1},{-1,1},{1,-1},{-1,-1}};
 AC valid=[](auto m,auto n)RET([=](size_t x,size_t y)RET(x<m&&y<n));
@@ -1421,6 +1433,7 @@ CPO fac=Vw decompose;CPO subset=Vw subset;
 CPO range=Vw iota;CPO zip=Vw zip;CPO enu=Vw enumerate;CPO split=Vw split;
 CPO rev=Vw reverse;CPO tran=Vw transform;CPO single=Vw single;CPO chunk_by=Vw chunk_by;
 CPO Min=Rg min;CPO Max=Rg max;CPO Size=Rg size;CPO Empty=Rg empty;CPO Begin=Rg begin;CPO End=Rg end;
+
 TP<CL...>ST error;
 #define TYPE(...) error<decltype(__VA_ARGS__)> _;
 }//simplify
