@@ -29,17 +29,19 @@ NP std {
 #define BC BL CEXP
 #define SC static CEXP
 #define AC auto CEXP
+#define EC explicit CEXP
 #define FAC friend AC
 #define SAC static AC
 #define COP CEXP operator
 #define FCOP friend CEXP operator
-#define NUA [[__no_unique_address__]]
-
 #define CPO CEXP inline auto
 #define concept IC BL
+
+#define lst initializer_list
+#define NUA [[__no_unique_address__]]
+
 #define Rg ranges::
 #define Vw views::
-
 #define In_Vws(...) NP views{__VA_ARGS__}
 #define In_Rgs(...) NP ranges{__VA_ARGS__}
 #define In_cpo(...) inline NP cpo{__VA_ARGS__}
@@ -60,10 +62,10 @@ NP std {
 
 #define CpDef(NAME,...) ST NAME##_concept { TP<__VA_ARGS__>auto freq ImplCpDef0
 #define ImplCpDef0(...) (__VA_ARGS__)->DCLT ImplCpDef1
-#define ImplCpDef1(...) (__VA_ARGS__  void()); }
+#define ImplCpDef1(...) (__VA_ARGS__  void());}
 
 #define CpBl(NAME,...) ST NAME##_concept { TP<__VA_ARGS__>auto freq()->ImplCpBl0
-#define ImplCpBl0(...) Req(__VA_ARGS__); }
+#define ImplCpBl0(...) Req(__VA_ARGS__);}
 #define Creq Reqs
 #define ImplCret(...) ,##__VA_ARGS__>>{},
 #define Cret1(Na,...) requires_expr<Na<DCLT(__VA_ARGS__)>>{},
@@ -73,10 +75,8 @@ NP std {
 #define RET_THIS(...) { __VA_ARGS__ return*this;}
 #define DefSuffix(OP) {auto a=*this;OP*this;return a;}
 #define Crefp(T)(const T&i,const T&j)
-#define MakeAuto(Na,...) Na<decay_t<DCLT(__VA_ARGS__)>>(__VA_ARGS__)
 //[traits]
 #define rmv_r_t remove_reference_t
-
 #define TypeInner(In,...) TY rmv_cvr_t<__VA_ARGS__>::In
 
 TP<CL T>ST ty_id{using type=T;};
@@ -106,7 +106,7 @@ ST __empty{};
 //[requires_]
 TP<CL,CL...>auto _req_impl(...)->false_type;TP<CL R,CL... A,CL=DCLT(&R::TP freq<A...>)>auto _req_impl(int)->true_type;
 TP<CL R,CL... A>IC BL requires_=DCLT(_req_impl<R,A...>(0))::value;
-TP<BL B,CL...>IC BL boolT=B; TP<BL B,auto...>IC BL boolV=B;
+TP<BL B,CL...>IC BL boolT=B;TP<BL B,auto...>IC BL boolV=B;
 TP<BL E,CL T=int>using requires_expr=enable_if_t<E,T>;
 
 TP<size_t I>ST tag:tag<I-1>{};TP<>ST tag<0>{};
@@ -131,28 +131,28 @@ TP<CL A,CL B>using common_ref_t=TY common_ref<A,B>::type;
 TP<CL A,CL B,CL=rmv_r_t<A>,CL=rmv_r_t<B>,CL=void>ST lval_common_ref {};
 TP<CL A,CL B,CL X,CL Y>
 ST lval_common_ref<A,B,X,Y,enable_if_t<is_reference_v<cond_res_t<copy_cv_t<X,Y>&,copy_cv_t<Y,X>&>>>>
-{ using type=cond_res_t<copy_cv_t<X,Y>&,copy_cv_t<Y,X>&>; };
+{ using type=cond_res_t<copy_cv_t<X,Y>&,copy_cv_t<Y,X>&>;};
 TP<CL A,CL B>using lval_common_ref_t=TY lval_common_ref<A,B>::type;
 TP<CL A,CL B,CL X,CL Y>ST common_ref<A&,B&,X,Y>:lval_common_ref<A&,B&>{};
 TP<CL X,CL Y>using rref_cr_helper_t=rmv_r_t<lval_common_ref_t<X&,Y&>>&&;
 TP<CL A,CL B,CL X,CL Y>ST common_ref<A&&,B&&,X,Y,enable_if_t<
 is_convertible_v<A&&,rref_cr_helper_t<X,Y>>&&is_convertible_v<B&&,rref_cr_helper_t<X,Y>>>>
-{ using type=rref_cr_helper_t<X,Y>; };
+{ using type=rref_cr_helper_t<X,Y>;};
 TP<CL A,CL B,CL X,CL Y>ST common_ref<A&&,B&,X,Y,enable_if_t<
 is_convertible_v<A&&,lval_common_ref_t<const X&,Y&>>>>
-{ using type=lval_common_ref_t<const X&,Y&>; };
+{ using type=lval_common_ref_t<const X&,Y&>;};
 TP<CL A,CL B,CL X,CL Y>ST common_ref<A&,B&&,X,Y>:common_ref<B&&,A&>{};
-TP<CL>ST xref { TP<CL U>using type=U; };
-TP<CL A>ST xref<A&>{ TP<CL U>using type=add_lvalue_reference_t<TY xref<A>::TP type<U>>; };
-TP<CL A>ST xref<A&&>{ TP<CL U>using type=add_rvalue_reference_t<TY xref<A>::TP type<U>>; };
-TP<CL A>ST xref<const A>{ TP<CL U>using type=add_const_t<TY xref<A>::TP type<U>>; };
-TP<CL A>ST xref<volatile A>{ TP<CL U>using type=add_volatile_t<TY xref<A>::TP type<U>>; };
-TP<CL A>ST xref<const volatile A>{ TP<CL U>using type=add_cv_t<TY xref<A>::TP type<U>>; };
+TP<CL>ST xref { TP<CL U>using type=U;};
+TP<CL A>ST xref<A&>{ TP<CL U>using type=add_lvalue_reference_t<TY xref<A>::TP type<U>>;};
+TP<CL A>ST xref<A&&>{ TP<CL U>using type=add_rvalue_reference_t<TY xref<A>::TP type<U>>;};
+TP<CL A>ST xref<const A>{ TP<CL U>using type=add_const_t<TY xref<A>::TP type<U>>;};
+TP<CL A>ST xref<volatile A>{ TP<CL U>using type=add_volatile_t<TY xref<A>::TP type<U>>;};
+TP<CL A>ST xref<const volatile A>{ TP<CL U>using type=add_cv_t<TY xref<A>::TP type<U>>;};
 TP<CL T,CL U,TP<CL>CL TQual,TP<CL>CL UQual>ST basic_com_ref {};
 TP<CL...>ST com_ref;
 TP<CL... Ts>using com_ref_t=TY com_ref<Ts...>::type;
 TP<>ST com_ref<>{};
-TP<CL T0>ST com_ref<T0>{ using type=T0; };
+TP<CL T0>ST com_ref<T0>{ using type=T0;};
 TP<CL T,CL U>IC BL has_common_ref_v=exists_v<common_ref_t,T,U>;
 TP<CL T,CL U>using basic_common_ref_t=TY basic_com_ref<rmv_cvr_t<T>,rmv_cvr_t<U>,
 xref<T>::TP type,xref<U>::TP type>::type;
@@ -161,10 +161,10 @@ TP<CL T,CL U>IC BL has_cond_res_v=exists_v<cond_res_t,T,U>;
 TP<CL T,CL U,CL=void>ST binary_common_ref:common_type<T,U>{};
 TP<CL T,CL U>ST binary_common_ref<T,U,enable_if_t<has_common_ref_v<T,U>>>:common_ref<T,U>{};
 TP<CL T,CL U>ST binary_common_ref<T,U,enable_if_t<has_basic_common_ref_v<T,U>&&!has_common_ref_v<T,U>>>
-{ using type=basic_common_ref_t<T,U>; };
+{ using type=basic_common_ref_t<T,U>;};
 TP<CL T,CL U>
 ST binary_common_ref<T,U,enable_if_t<has_cond_res_v<T,U>&&!has_basic_common_ref_v<T,U>&&!has_common_ref_v<T,U>>>
-{ using type=cond_res_t<T,U>; };
+{ using type=cond_res_t<T,U>;};
 TP<CL T1,CL T2>ST com_ref<T1,T2>:binary_common_ref<T1,T2>{ };
 TP<CL Void,CL T1,CL T2,CL...Re>ST multiple_com_ref {};
 TP<CL T1,TY T2,CL...Re>ST multiple_com_ref
@@ -179,11 +179,11 @@ TP<CL T,CL U>using ternary_return_t=decay_t<DCLT(0?DCLV(T):DCLV(U))>;
 TP<CL,CL,CL=void>ST binary_common_type{};
 TP<CL T,CL U>ST binary_common_type<T,U,enable_if_t<!same_decayed_v<T,U>>>:common_type<decay_t<T>,decay_t<U>>{};
 TP<CL T,CL U>ST binary_common_type<T,U,enable_if_t<same_decayed_v<T,U>&&exists_v<ternary_return_t,T,U>>>
-{ using type=ternary_return_t<T,U>; };
+{ using type=ternary_return_t<T,U>;};
 TP<CL T,CL U>
 ST binary_common_type<T,U,enable_if_t<
 same_decayed_v<T,U>&&!exists_v<ternary_return_t,T,U>&&exists_v<cond_res_t,cref_t<T>,cref_t<U>>>>
-{ using type=decay_t<cond_res_t<cref_t<T>,cref_t<U>>>; };
+{ using type=decay_t<cond_res_t<cref_t<T>,cref_t<U>>>;};
 TP<>ST common_type<>{};
 TP<CL T>ST common_type<T>:common_type<T,T>{};
 TP<CL T,CL U>ST common_type<T,U>:binary_common_type<T,U>{};
@@ -216,9 +216,9 @@ AC impl(F&&f,A&&...a)NOEXP_DCLT_RET(FWD(f)(FWD(a)...))
 ST fn { TP<CL F,CL... A>auto COP()(F&&f,A&&...a)const NOEXP_DCLT_RET(impl(FWD(f),FWD(a)...)) };
 }//invoke_
 In_Rgs(In_cpo(IC invoke_::fn invoke;))
+template<class T>lst<T>mk_lst(lst<T> i)NOEXP_RET(i)
 TP<CL Void,CL,CL...>ST invoke_result_helper {};
-TP<CL F,CL... A>
-ST invoke_result_helper<void_t<DCLT(Rg invoke(DCLV(F),DCLV(A)...))>,F,A...>{
+TP<CL F,CL... A>ST invoke_result_helper<void_t<DCLT(Rg invoke(DCLV(F),DCLV(A)...))>,F,A...>{
 using type=DCLT(Rg invoke(DCLV(F),DCLV(A)...));
 };
 TP<CL F,CL... A>ST invoke_result:invoke_result_helper<void,F,A...>{};
@@ -235,8 +235,10 @@ TP<CL F,CL... A>concept invocable=CpRef(invocable,F,A...);
 #define same_as is_same_v
 TP<CL T,CL U>concept same=same_as<rmv_cvr_t<T>,rmv_cvr_t<U>>;
 #define def_call(Na,FL) TP<CL...A>auto COP()(A&&...a) FL NOEXP_DCLT_RET(call((Na FL)*this,FWD(a)...))
+#define def_init(Na,FL) TP<CL T,CL...A>auto COP()(initializer_list<T>&&i,A&&...a) FL NOEXP_DCLT_RET(call((Na FL)*this,FWD(i),FWD(a)...))
 #define def_sub(Na,FL) TP<CL A>auto COP[](A&&a) FL NOEXP_DCLT_RET(sub((Na FL)*this,FWD(a)))
 #define def_all(S,Na) def_##S(Na,&)def_##S(Na,&&)def_##S(Na,const&)def_##S(Na,const&&)
+
 ST deleted_t{};
 TP<CL...>CL first_of{};TP<CL...F>first_of(F...) ->first_of<F...>;
 TP<CL F,CL...T>CL first_of<F,T...>{
@@ -254,8 +256,6 @@ TP<CL S,CL...X,CL FF=F>SAC call(S&&s,X&&...x)noexcept(is_nothrow_invocable_v<lik
 ->inv_res_t<like_t<FF,S&&>,X...,T...>RET(apply([&](auto&&...a)RET(Rg invoke(FWD(s).f,__VA_ARGS__)),FWD(s).a))def_all(call,Na)\
 private:NUA F f;NUA tuple<T...>a;};TP<CL F,CL...A>Na(F,A...)->Na<F,A...>;
 Bind(bindF,FWD(a)...,FWD(x)...)Bind(bindB,FWD(x)...,FWD(a)...)
-
-
 #undef Bind
 TP<CL L,CL R>ST compose{
 TP<CL X,CL Y>compose(X&&l,Y&&r):l(FWD(l)),r(FWD(r)){}
@@ -264,17 +264,15 @@ private:L l;R r;};
 TP<CL L,CL R>compose(L,R)->compose<L,R>;
 TP<CL F>ST raco;
 TP<CL X>raco(X)->raco<X>;
-auto make_raco=[](auto&&x)NOEXP_DCLT_RET(raco(FWD(x)));
 TP<CL F>ST raco{using Raco=raco;TP<CL>friend ST raco;raco()=default;TpReq(CL X)(!same<X,raco>)CEXP raco(X&&x):f(FWD(x)){}
 SAC __pip__=first_of([](auto&&l,auto&&r)NOEXP_DCLT_RET(Rg invoke(FWD(r),FWD(l))),[](auto&&l,auto&&r)NOEXP_DCLT_RET(compose(FWD(l),FWD(r))));
-TpReq(CL L,CL R)(ReqType(TypeInner(Raco,L),TypeInner(Raco,R)))SAC pip(L&&l,R&&r)NOEXP_DCLT_RET(make_raco(__pip__(FWD(l).f,FWD(r).f)))
-SAC test=[](auto&&r,auto&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(r).f,FWD(a)...));
-SAC call=first_of([](auto&&r,auto&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(r).f,FWD(a)...)),
-[](auto&&r,auto&&...a)NOEXP_DCLT_RET(make_raco(bindB(FWD(r).f,FWD(a)...))));
-SAC sub=[](auto&&r,auto&&i)NOEXP_DCLT_RET(make_raco(bindF(FWD(r).f,FWD(i))));
-def_all(sub,raco)def_all(call,raco)
-private:F f;};
+TpReq(CL L,CL R)(ReqType(TypeInner(Raco,L),TypeInner(Raco,R)))SAC pip(L&&l,R&&r)NOEXP_DCLT_RET(my::raco(__pip__(FWD(l).f,FWD(r).f)))
 
+SAC call=first_of([](auto&&r,auto&&...a)NOEXP_DCLT_RET(Rg invoke(FWD(r).f,FWD(a)...)),
+[](auto&&r,auto&&...a)NOEXP_DCLT_RET(my::raco(bindB(FWD(r).f,FWD(a)...))));
+SAC sub=[](auto&&r,auto&&i)NOEXP_DCLT_RET(my::raco(bindF(FWD(r).f,FWD(i))));
+def_all(sub,raco)def_all(call,raco)//def_all(init,raco)
+private:F f;};
 CpDef(is_raco,CL T)(TY T::Raco)();TP<CL T>concept is_raco=CpRef(is_raco,T);
 CPO pipeline=first_of(
     [](auto&&l,auto&&r)DCLT_RET(l.pip(FWD(l),FWD(r))),
@@ -346,6 +344,7 @@ CpDef(swappable_with,CL T,CL U)(T&&t,U&&u) (
 Reqs(com_ref_with<T,U>)
 Rg swap(FWD(t),FWD(t)),Rg swap(FWD(u),FWD(u)),Rg swap(FWD(t),FWD(u)),Rg swap(FWD(u),FWD(t)),
 );
+TP<CL X,CL Y>concept swappable_with=CpRef(swappable_with,X,Y);
 TP<CL T>concept bool_ts_impl=conv_to<T,bool>;
 CpDef(bool_ts,CL T) (T&&t)(Cret1(bool_ts_impl,!FWD(t)));
 TP<CL T>concept boolean_testable=bool_ts_impl<T>&&CpRef(bool_ts,T);
@@ -383,7 +382,7 @@ TP<CL T>concept regular=semiregular<T>&&eq_cmp<T>;
 CpBl(predicate,CL F,CL...A)(invocable<F,A...>&&boolean_testable<inv_res_t<F,A...>>);
 TP<CL F,CL... A>concept predicate=CpRef(predicate,F,A...);
 TP<CL R,CL T,CL U>concept relation=predicate<R,T,T>&&predicate<R,U,U>&&predicate<R,T,U>&&predicate<R,U,T>;
-CpDef(tplk, CL T)()(RetReq(same_as,size_t)(tuple_size_v<T>));//[todo]more
+CpDef(tplk,CL T)()(RetReq(same_as,size_t)(tuple_size_v<T>));//[todo]more
 TP<CL T>concept tuple_like=CpRef(tplk,T);
 //[traits]
 TP<CL T>using idx_tp=make_index_sequence<tuple_size_v<rmv_cvr_t<T>>>;
@@ -433,28 +432,36 @@ RET(N-countl_zero(x))
 };
 TpReq(CL T,CL F)(sizeof(T)==sizeof(F))auto bit_cast(const F&s)noexcept{T d;memcpy(&d,&s,sizeof(T));RET(d)}
 NP ranges{
-using std::empty,std::data;
+using std::data;
 inline NP cpo {
-auto size=[](auto&&x) DCLT_RET(std::size(FWD(x)));
-auto begin=[](auto&&x) DCLT_RET(std::begin(FWD(x)));
-auto end=[](auto&&x) DCLT_RET(std::end(FWD(x)));
-auto iter_swap=[](auto&&x,auto&&y)DCLT_RET(std::iter_swap(FWD(x),FWD(y)));
-auto iter_move=[](auto&&i)DCLT_RET(move(*FWD(i)));
+using less=raco<::less<>>;
+using greater=raco<::greater<>>;
+using less_equal=raco<::less_equal<>>;
+using greater_equal=raco<::greater_equal<>>;
+using equal_to=raco<::equal_to<>>;
+using not_equal_to=raco<::not_equal_to<>>;
+using plus=raco<::plus<>>;
+using minus=raco<::minus<>>;
+IC auto empty=[](auto&&x)DCLT_RET(std::empty(FWD(x)));
+IC raco size=[](auto&&x)DCLT_RET(std::size(FWD(x)));
+IC auto begin=[](auto&&x)DCLT_RET(std::begin(FWD(x)));
+IC auto end=[](auto&&x)DCLT_RET(std::end(FWD(x)));
+NP i_mv_{
+void iter_move();
+IC auto fn=first_of([](auto&&i)NOEXP_DCLT_RET(iter_move(*FWD(i))),[](auto&&i)NOEXP_DCLT_RET(move(*FWD(i))));
+}
+IC raco iter_move=i_mv_::fn;
 }
 }
-inline NP algo {
-ST identity{TP<CL T>DCLT(auto)COP()(T&&t)const RET((T&&)t)};
-TP<CL C=less<>,CL P=identity>ST proj_cmp{
+ST idt{TP<CL T>DCLT(auto)COP()(T&&t)const RET((T&&)t)};
+TP<CL C=less<>,CL P=idt>ST proj_cmp{
 TP<CL X,CL Y>proj_cmp(X&&x,Y&&y):c((X&&)x),p((Y&&)y) {}
 TP<CL T,CL U>BL COP()(T&&t,U&&u)const RET(Rg invoke(c,Rg invoke(p,(T&&)t),Rg invoke(p,(U&&)u)))
 C c;P p;
 };
-
 TP<CL C,CL P>proj_cmp(C,P)->proj_cmp<C,P>;
-}
-inline NP ITER {
+
 //[iterator.primitives]
-//[std.iterator.tags]
 using ip_i_tag=input_iterator_tag;
 using fw_i_tag=forward_iterator_tag;
 using bd_i_tag=bidirectional_iterator_tag;
@@ -523,7 +530,7 @@ Cret(same_as,++i)(I&)
 i++,
 );
 TP<CL I>concept winc=movable<I>&&CpRef(winc,I);
-ST df_t {}; IC df_t df {};
+ST df_t {};IC df_t df {};
 IC ST unr_t{
 #define H TpReq(CL I)(winc<I>)BL FCOP
 H==(I,unr_t)RET(0)H!=(I,unr_t)RET(1)H==(unr_t,I)RET(0)H!=(unr_t,I)RET(1)
@@ -555,26 +562,44 @@ CpBl(ra_i,CL I)(derived_from<iter_concept<I>,ra_i_tag>);
 TP<CL I>concept ra_i=bd_i<I>&&CpRef(ra_i,I);
 CpBl(ct_i,CL I)(derived_from<iter_concept<I>,ct_i_tag>);
 TP<CL I>concept ct_i=ra_i<I>&&CpRef(ct_i,I);
+//[ind]
 CpDef(ind_ui,CL F,CL I,CL V=iv_t<I>&,CL R=ir_t<I>)()(
 Creq(invocable<F&,V>&&invocable<F&,R>&&invocable<F&,ic_t<I>>)
 Creq(com_ref_with<inv_res_t<F&,V>,inv_res_t<F&,R>>)
 );
 TP<CL F,CL I>concept ind_ui=ind_rd<I>&&copy_cst<F>&&CpRef(ind_ui,F,I);
+//[todo:ind.up]
 CpDef(ind_bp,CL F,CL I,CL J,CL VI=iv_t<I>&,CL VJ=iv_t<J>&,CL RI=ir_t<I>,CL RJ=ir_t<J>)()(
 Creq(predicate<F&,VI,VJ>&&predicate<F&,VI,RJ>&&predicate<F&,RI,VJ>&&predicate<F&,RI,RJ>)
 Creq(predicate<F&,ic_t<I>,ic_t<J>>)
 );
 TP<CL F,CL I,CL J=I>concept ind_bp=ind_rd<I>&&ind_rd<J>&&copy_cst<F>&&CpRef(ind_bp,F,I,J);
+CpBl(ind_rel,CL F,CL I,CL J)(
+relation<F&,iv_t<I>&,iv_t<J>&>&&relation<F&,iv_t<I>&,ir_t<J>>&&
+relation<F&,ir_t<I>,iv_t<J>&>&&relation<F&,ir_t<I>,ir_t<J>>&&relation<F&,ic_t<I>,ic_t<J>>
+);
+TP<CL F,CL I,CL J=I>concept ind_rel=ind_rd<I>&&ind_rd<J>&&copy_cst<F>&&CpRef(ind_rel,F,I,J);
 TP<CL F,CL...I>using ind_res_t=inv_res_t<F,ir_t<I>...>;
-TP<CL,CL,CL=int>ST projected{};
-TP<CL I,CL P>ST projected<I,P,Req(ind_rd<I>&&ind_ui<P,I>)>:cond_v<rmv_cvr_t<ind_res_t<P&,I>>>{ind_res_t<P&,I>operator*()const;};
+TP<CL,CL,CL=int>ST projed{};
+TP<CL I,CL P>ST projed<I,P,Req(ind_rd<I>&&ind_ui<P,I>)>:cond_v<rmv_cvr_t<ind_res_t<P&,I>>>{ind_res_t<P&,I>operator*()const;};
 //[alg.req]
-CpDef(ind_mov,CL I,CL O)()(Creq(ind_rd<I>)Creq(ind_wr<O,irr_t<I>>));
-TP<CL I,CL O>concept indirectly_movable=CpRef(ind_mov,I,O);
-TP<CL I,CL J,CL R,CL P=identity,CL Q=identity>
-concept ind_cmp=ind_bp<R,projected<I,P>,projected<J,Q>>;
-}//ITER
+CpDef(ind_mov,CL I,CL O)()(Creq(ind_rd<I>)Creq(ind_wr<O,irr_t<I>>));TP<CL I,CL O>concept ind_mv=CpRef(ind_mov,I,O);
+CpBl(ind_mv_sto,CL I,CL O)(ind_mv<I,O>&&ind_wr<O,iv_t<I>>&&movable<iv_t<I>>&&cst_from<iv_t<I>,irr_t<I>>&&assignable_from<iv_t<I>&, irr_t<I>>);
+TP<CL I,CL O>concept ind_mv_sto=CpRef(ind_mv_sto,I,O);
+TP<CL I,CL J,CL R,CL P=idt,CL Q=idt>concept ind_cmp=ind_bp<R,projed<I,P>,projed<J,Q>>;
 NP ranges {
+NP i_sw_{
+TP<CL X,CL Y>void iter_swap(X,Y)=delete;
+TpReq(CL I,CL J)(ind_rd<I>&&ind_rd<J>&&swappable_with<ir_t<I>,ir_t<J>>)AC us_sw(I&&i,J&&j)NOEXP_DCLT_RET(Rg swap(*FWD(i),*FWD(j)))
+TpReq(CL X,CL Y)(ind_mv_sto<X,Y>&&ind_mv_sto<Y,X>)CEXP iv_t<X>it_exc_mv(X&&x, Y&&y)
+noexcept(noexcept(iv_t<X>(move(x))&&noexcept(*x=iter_move(y)))){iv_t<X> old(iter_move(x));*x=iter_move(y);RET(old)}
+IC auto fn=first_of(
+[](auto&&i,auto&&j)NOEXP_DCLT_RET((void)iter_swap(FWD(i),FWD(j))),
+[](auto&&i,auto&&j)NOEXP_DCLT_RET((void)us_sw(FWD(i),FWD(j))),
+[](auto&&i,auto&&j)NOEXP_DCLT_RET((void)(*FWD(i)=it_exc_mv(FWD(j),FWD(i))))
+);
+}
+In_cpo(IC raco iter_swap=i_sw_::fn;)
 //[todo]
 CpDef(ind_sw,CL I,CL J)(I&i,J&j)(Rg iter_swap(i,j),Rg iter_swap(j,i),Rg iter_swap(i,i),Rg iter_swap(j,j),);
 TP<CL I,CL J=I>concept ind_sw=ind_rd<I>&&ind_rd<J>&&CpRef(ind_sw,I,J);
@@ -598,7 +623,7 @@ TpReq(CL I,CL...A)(bd_i<I>)auto COP()(I x,A...a)const NOEXP_DCLT_RET((advance(x,
 }prev;
 
 //[ranges.range] concepts
-CpDef(range,CL T)(T& t)(Rg begin(t),Rg end(t),);
+CpDef(range,CL T)(T&t)(Rg begin(t),Rg end(t),);
 TP<CL T>concept range=CpRef(range,T);
 TP<CL>IC BL enable_borrowed_rg=0;
 TP<CL T>concept borrowed_rg=range<T>&&(is_lvalue_reference_v<T>|| enable_borrowed_rg<rmv_cvr_t<T>>);
@@ -609,7 +634,7 @@ TP<CL R>using rd_t=id_t<i_t<R>>;
 TP<CL R>using rv_t=iv_t<i_t<R>>;
 TP<CL R>using rr_t=ir_t<i_t<R>>;
 TP<CL R>using rrr_t=irr_t<i_t<R>>;
-CpDef(sz_rg,CL T)(T& t)(Rg size(t),);
+CpDef(sz_rg,CL T)(T& t)(Cret1(integral,Rg size(t)));
 TP<CL T>concept sz_rg=range<T>&&CpRef(sz_rg,T);
 //[range.refinements]
 //[todo]output_rg
@@ -625,54 +650,72 @@ CpDef(ct_rg,CL T)(T& t)(RetReq(same_as,add_pointer_t<rr_t<T>>) (Rg data(t)));
 TP<CL T>concept ct_rg=range<T>&&CpRef(ct_rg,T);
 CpBl(cm_rg,CL R)(same_as<i_t<R>,s_t<R>>);
 TP<CL R>concept cm_rg=range<R>&&CpRef(cm_rg,R);
-//[compare]
-using less=raco<::less<>>;
 //[range.copy]
 ST copy_fn {
 TP<CL I,CL S,CL O,CL P>
-static O CEXP impl(I f,S l,O o,P p) { for (;f!=l; ++f,++o)*o=invoke(p,*f); return o; }
-TP<CL R,CL O,CL P=identity>
-O COP ()(R&&r,O o,P p={}) const { return impl(begin(r),end(r),move(o),ref(p)); }
+static O CEXP impl(I f,S l,O o,P p) { for (;f!=l;++f,++o)*o=invoke(p,*f);return o;}
+TP<CL R,CL O,CL P=idt>
+O COP ()(R&&r,O o,P p={}) const { return impl(begin(r),end(r),move(o),ref(p));}
 };
 IC copy_fn copy;
+              
 ST min_fn{
-TP<CL I,CL S,CL C,CL P>SAC impl(I f,S l,C c,P p){iv_t<I>r=*f;proj_cmp w={c,p};while(++f!=l)if(w(*f,r))r=*f;return r;}
-TpReq(CL R,CL C=less,CL P=identity)(range<R>)auto COP()(R&&r,C c={},P p={})const RET(impl(begin(r),end(r),move(c),ref(p)))
-TP<CL T,CL C=less,CL P=identity>auto COP()(initializer_list<T>r,C c={},P p={})const RET(impl(begin(r),end(r),move(c),ref(p)))
-TP<CL T,CL U,CL C=less,CL P=identity>auto COP()(T&&t,U&&u,C c={},P p={})const
+TpReq(CL R,CL C=less,CL P=idt)(ip_rg<R>&&ind_rel<C,projed<i_t<R>,P>>)
+rv_t<R>COP()(R&&r,C c={},P p={})const{auto f=begin(r);auto l=end(r);rv_t<R>t=*f;proj_cmp w={ref(c),ref(p)};while(++f!=l)if(w(*f,t))t=*f;RET(t)}
+TpReq(CL T,CL U,CL C=less,CL P=idt)(relation<C,T,U>)auto COP()(T&&t,U&&u,C c={},P p={})const
 NOEXP_DCLT_RET(Rg invoke(c,Rg invoke(p,t),Rg invoke(p,u))?com_ref_t<T&&,U&&>(FWD(t)):com_ref_t<T&&,U&&>(FWD(u)))
 };
 IC raco min=min_fn{};
-auto abs=[](auto x)RET(::abs(x));
+ST max_fn{
+TpReq(CL R,CL C=less,CL P=idt)(ip_rg<R>&&ind_rel<C,projed<i_t<R>,P>>)
+rv_t<R>COP()(R&&r,C c={},P p={})const{auto f=begin(r);auto l=end(r);rv_t<R>t=*f;proj_cmp w={ref(c),ref(p)};while(++f!=l)if(w(t,*f))t=*f;RET(t)}
+// TP<CL T,CL C=less,CL P=idt>auto COP()(initializer_list<T>r,C c={},P p={})const DCLT_RET((*this)(r,move(c),ref(p)))
+TP<CL T,CL U,CL C=less,CL P=idt>auto COP()(T&&t,U&&u,C c={},P p={})const
+NOEXP_DCLT_RET(Rg invoke(c,Rg invoke(p,t),Rg invoke(p,u))?com_ref_t<T&&,U&&>(FWD(u)):com_ref_t<T&&,U&&>(FWD(t)))
+};
+IC raco max=max_fn{};
+IC raco abs=[](auto x)NOEXP_DCLT_RET(::abs(x));
+//[alg.find]
+IC ST find_if_fn {
+TP<CL I,CL S,CL Pr,CL P>static CEXP I impl(I f,S l,Pr pr,P p){for(;f!=l;++f)if(invoke(pr,invoke(p,*f)))break;return f;}
+} find_if;
+IC ST find_if_not_fn{
+TpReq(CL R,CL Pr,CL P=idt)(ip_rg<R>) 
+auto COP()(R&&r,Pr pr,P p={})const RET(find_if_fn::impl(begin(r),end(r),not_fn(ref(pr)),ref(p)))
+} find_if_not;
+IC ST adjacent_find_fn{
+TP<CL I,CL S,CL Pr,CL P>CEXP static I impl(I f,S l,Pr pr,P p){
+if(f==l)RET(f)auto w=proj_cmp(ref(pr),ref(p));
+for(auto n=next(f);n!=l;++n,++f)if(w(*f,*n))break;return f;
+}
+TpReq(CL R,CL C=equal_to,CL P=idt)(fw_rg<R>&&ind_bp<C,projed<i_t<R>,P>>)
+auto COP()(R&&r,C c={},P p={})const RET(impl(ALL(r),ref(c),ref(p)))
+TpReq(CL I,CL S,CL C=equal_to,CL P=idt)(fw_i<I>&&s_for<S,I>&&ind_bp<C,projed<I,P>>)
+auto COP()(I f,S l,C c={},P p={})const RET(impl(move(f),move(l),ref(c),ref(p)))
+} adjacent_find;
 IC ST sort_fn{
 TP<CL I,CL S,CL C,CL P>
 static CEXP I impl(I f,S l,C c,P p){auto r=Rg next(f,l);::sort(f,r,proj_cmp(ref(c),ref(p)));return r;}
-TpReq(CL R,CL C=less,CL P=identity)(ra_rg<R>)//todo sortable
+TpReq(CL R,CL C=less,CL P=idt)(ra_rg<R>)//todo sortable
 DCLT(auto) COP()(R&&r,C c={},P p={})const RET(impl(Rg begin(r),Rg end(r),ref(c),ref(p)))
-} sort;
-IC ST fold_fn {//[[todo]]requirs
-TP<CL I,CL S,CL T,CL Op,CL P>static AC impl(I f,S l,T t,Op op,P p) {
-using U=rmv_cvr_t<inv_res_t<Op&,T,ind_res_t<P&,I>>>;
-if(f==l)RET(U(move(t)))U a=invoke(op,move(t),*f);while(++f!=l)a=invoke(op,move(a),invoke(p,*f));return a;
-}
-TpReq(CL I,CL S,CL T,CL Op=plus<>,CL P=identity)(ip_i<I>&&s_for<S,I>)
-auto COP()(I f,S l,T t,Op op={},P p={}) const RET(impl(move(f),move(l),move(t),ref(op),ref(p)))
-TpReq(CL R,CL T,CL Op=plus<>,CL P=identity)(ip_rg<R>)auto COP()(R&&r,T t,Op op={},P p={})const RET(impl(Rg begin(r),Rg end(r),move(t),ref(op),ref(p)))
-TP<CL T,CL Op,CL P>ST fn{T t;Op op;P p;
-TpReq(CL I,CL S)(ip_i<I>&&s_for<S,I>)auto COP()(I f,S l)RET(impl(move(f),move(l),move(t),ref(op),ref(p)))//[need?]
-TpReq(CL R)(ip_rg<R>)auto COP()(R&&r)RET(impl(begin(r),end(r),move(t),ref(op),ref(p)))
-TpReq(CL R)(ip_rg<R>)auto FCOP|(R&&r,fn f)RET(impl(begin(r),end(r),move(f.t),ref(f.op),ref(f.p)))
-};
-TP<CL T,CL Op=plus<>,CL P=identity>auto COP()(T t,Op op={},P p={})const RET(fn<T,Op,P>{move(t),move(op),move(p)})
-} fold;
+}sort;
 
+ST fold_fn{
+CpBl(ind_lf_impl,CL F,CL T,CL I,CL U)(movable<T>&&movable<U>&&conv_to<T,U>&&assignable_from<U&,inv_res_t<F&,U,ir_t<I>>>);
+CpBl(ind_lf,CL F,CL T,CL I,CL X=inv_res_t<F&,T,ir_t<I>>)(copy_cst<F>&&ind_rd<I>&&conv_to<X,decay_t<X>>&&CpRef(ind_lf_impl,F,T,I,decay_t<X>));
+TpReq(CL I,CL T,CL S=I,CL P=idt,CL F=plus,CL U=rmv_cvr_t<inv_res_t<F&,T,ind_res_t<P&,I>>>)(ip_i<I>&&s_for<S,I>&&CpRef(ind_lf,F,T,projed<I,P>))
+U COP()(I f,S l,T t,F o,P p)const{if(f==l)RET(U(move(t)))U a=invoke(o,move(t),invoke(p,*f));while(++f!=l)a=invoke(o,move(a),invoke(p,*f));RET(a)}
+TpReq(CL R,CL T,CL F=plus,CL P=idt)(ip_rg<R>&&CpRef(ind_lf,F,T,projed<i_t<R>,P>))
+auto COP()(R&&r,T t,F o={},P p={})const DCLT_RET((*this)(begin(r),end(r),move(t),ref(o),ref(p)))
+};
+IC raco fold=fold_fn{};
 //[interfaces]
-TP<CL D>CL view_interface {
-CEXP D& derived() noexcept RET(static_cast<D&>(*this))
-CEXP const D& derived() const noexcept RET(static_cast<const D&>(*this))
+TP<CL D>CL view_interface{
+CEXP D& derived()noexcept RET(static_cast<D&>(*this))
+CEXP const D&derived() const noexcept RET(static_cast<const D&>(*this))
 public:using __interface=view_interface;
-LazyT(D,fw_rg<t>) CEXP BL empty() RET(begin(derived())==end(derived()))
-LazyT(D,fw_rg<const t>) CEXP BL empty() const RET(begin(derived())==end(derived()))
+LazyT(D,fw_rg<t>)CEXP BL empty() RET(begin(derived())==end(derived()))
+LazyT(D,fw_rg<const t>)CEXP BL empty() const RET(begin(derived())==end(derived()))
 LazyT(D,ReqExpr(Rg empty(DCLV(t&)))) explicit COP bool() RET(!Rg empty(derived()) )
 LazyT(D,ReqExpr(Rg empty(DCLV(t&)))) explicit COP bool() const RET(!Rg empty(derived()) )
 LazyT(D,ReqExpr(range<D>&&ct_i<i_t<t>>)) AC data()
@@ -690,15 +733,15 @@ LazyT(D,bd_rg<const t>&&cm_rg<const t>) CEXP DCLT(auto) back() const RET(*prev(e
 LazyT(D,ra_rg<t>) DCLT(auto) COP[](rd_t<t>n) RET(begin(derived())[n])
 LazyT(D,ra_rg<t>) DCLT(auto) COP[](rd_t<t>n) const RET(begin(derived())[n])
 };
-TP<CL I,CL Tg,CL D,CL V, CL Ref>CL IF{//Need:adv inc dec,friend:dif lt eq:lt:df_t
+TP<CL I,CL Tg,CL D,CL V,CL Ref>CL IF{//Need:adv inc dec,friend:dif lt eq:lt:df_t
 #define TgD(v)static IC BL v=derived_from<Tg,v##_i_tag>;
 TgD(fw)TgD(bd)TgD(ra)
 #undef TgD
 using R=I&;using CR=const I&;
 R CEXP It()RET(R(*this)) CR CEXP It()const RET(CR(*this))
-#define RT(...) { __VA_ARGS__; return R(*this); }
+#define RT(...) { __VA_ARGS__;return R(*this);}
 public:using pointer=void;using iterator_category=Tg;using iterator_concept=Tg;using difference_type=D;using value_type=V;using reference=Ref;
-R COP++()RT(It().inc())auto COP++(int){ if CEXP(fw) DefSuffix(++) else ++*this; }
+R COP++()RT(It().inc())auto COP++(int){ if CEXP(fw) DefSuffix(++) else ++*this;}
 LazyT(I,bd)R COP--()RT(It().dec())LazyT(I,bd)I COP--(int)DefSuffix(--)
 LazyT(I,ra)R COP+=(D n)RT(It().adv(n))LazyT(I,ra)R COP-=(D n)RT(It().adv(-n))
 LazyT(I,ra)I FCOP+(const IF&i,D n){I j=i.It();R(j)+=n;return j;}LazyT(I,ra)I FCOP+(D n,const IF&i)RET(i+n)
@@ -750,22 +793,31 @@ CpDef(has_arrow,CL I)(I i)(i.operator->(),);
 TP<CL I>concept has_arrow=ip_i<I>&&(is_pointer_v<I>|| CpRef(has_arrow,I));
 TP<CL T,CL U>concept different_from=!same_as<rmv_cvr_t<T>,rmv_cvr_t<U>>;
 ST dangling { dangling()noexcept=default;TP<CL...A>dangling(A&&...){} };
-TP<CL T>ST box_:optional<T>{
-using P=optional<T>;
-using P::optional;
-LazyT(T,!df_init<T>) box_()=delete;
-LazyT(T,df_init<T>)CEXP box_()noexcept(is_nothrow_default_constructible_v<T>):optional<T>{in_place}{}
-box_(const box_&)=default;box_(box_&&)=default;
-box_&operator=(const box_&other)RET_THIS(
-if CEXP(assignable_from<T&,const T&>)this->P::operator=((const optional<T>&)other);
-else if (this!=addressof(other)){if(other)this->emplace(*other);else this->reset();}
-)
-box_& operator=(box_&&other)RET_THIS(
-if CEXP (assignable_from<T&,T>)this->P::operator=((optional<T>&&)(other));
-else if (this!=addressof(other)) { if (other) this->emplace(move(*other)); else this->reset();} 
-)
+//[box]
+#define DF box(const box&)=default;box(box&&)=default;
+TP<CL T,CL=int>ST box:optional<T>{
+using P=optional<T>;using P::optional;
+LazyT(T,!df_init<T>)box()=delete;
+LazyT(T,df_init<T>)CEXP box()noexcept(is_nothrow_default_constructible_v<T>):optional<T>{in_place}{}
+#define AS(CV) box&operator=(box CV u)RET_THIS(\
+if CEXP(assignable_from<T&,T CV>)this->P::operator=((optional<T>CV)u);else if(this!=&u){if(u)this->emplace((T CV)*u);else this->reset();})
+AS(&&)AS(const&)DF
+#undef AS
 };
-TP<CL T>using copyable_box=box_<T>;
+TP<CL T>ST box<T,Req(copyable<T>||(is_nothrow_move_constructible_v<T>&&is_nothrow_copy_constructible_v<T>))>{
+EC box(const T&t)noexcept(is_nothrow_copy_constructible_v<T>):t(t){}
+EC box(T&&t)noexcept(is_nothrow_copy_constructible_v<T>):t(move(t)){}
+TpReq(CL...A)(cst_from<T,A...>)EC box(in_place_t,A&&...a)noexcept(is_nothrow_constructible_v<T,A...>):t(FWD(a)...){}
+box()=default;
+#define AS(CV) box&operator=(box CV r)noexcept RET_THIS(if CEXP(copyable<T>)t=(T CV)r.t;else if(this!=&r)t.~_Tp(),new(&t)T((T CV)*r);)
+AS(const&)AS(&&)DF
+#undef AS
+SC BL has_value()noexcept RET(1)
+#define AX(a,b,c,d) CEXP c T a operator b()c noexcept RET(d t)
+AX(&,*,,)AX(&,*,const,)AX(*,->,,&)AX(*,->,const,&)
+#undef AX
+private:T t;};
+#undef DF
 //[range.subrange]
 enum CL subrange_kind {sized,unsized};
 TP<CL From,CL To>concept conv_to_non_slicing=
@@ -791,10 +843,9 @@ LazyT(I,copyable<I>)AC begin()const RET(i)
 LazyT(I,!copyable<I>)AC begin()RET(move(i))
 CEXP S end()const RET(s)
 CEXP BL empty()const RET(i==s)
-LazyV(K,K==subrange_kind::sized)CEXP sz_t size()const{if CEXP(StoreSize)return sz; else return to_unsigned(s-i);}
-private:I i; S s; NUA conditional_t<StoreSize,sz_t,dangling>sz;
+LazyV(K,K==subrange_kind::sized)CEXP sz_t size()const{if CEXP(StoreSize)return sz;else return to_unsigned(s-i);}
+private:I i;S s;NUA conditional_t<StoreSize,sz_t,dangling>sz;
 };
-
 TpReq(CL I,CL S)(s_for<S,I>)subrange(I,S)->subrange<I,S>;
 TpReq(CL I,CL S)(s_for<S,I>)subrange(I,S,make_unsigned_t<id_t<I>>)->subrange<I,S,subrange_kind::sized>;
 TpReq(CL R)(borrowed_rg<R>)subrange(R&&)->subrange<i_t<R>,s_t<R>,
@@ -823,13 +874,13 @@ TpReq(CL T)(is_object_v<T>&&copy_cst<T>)ST single_view:view_interface<single_vie
 TpReq(CL U)(same_as<rmv_cvr_t<U>,T>)CEXP explicit single_view(U&&u):v_(FWD(u)){}
 TpReq(CL...A)(cst_from<T,A...>)CEXP explicit single_view(in_place_t l,A&&...a):v_{l,FWD(a)...}{}
 #define Y(Na,Cv,...) CEXP Cv T*Na()Cv noexcept RET(__VA_ARGS__)
-#define X(Na,Cv,...) Y(Na,Cv, data() __VA_ARGS__)
+#define X(Na,Cv,...) Y(Na,Cv,data() __VA_ARGS__)
 X(begin,)X(begin,const,)X(end,,+1)X(end,const,+1)
 #undef X
 static CEXP size_t size()noexcept RET(1)
 Y(data,,v_.operator->())Y(data,const,v_.operator->())
 #undef Y
-private:copyable_box<T> v_;
+private:box<T> v_;
 };
 TP<CL T>single_view(T)->single_view<T>;
 Def_Vw_Adp(single)
@@ -850,7 +901,7 @@ using Tg=conditional_t<advanceable<W>,ra_i_tag,conditional_t<decrementable<W>,bd
 conditional_t<incrementable<W>,fw_i_tag,ip_i_tag>>>;
 using D=id_t<W>;
 TP<CL I>using F=IF<I,Tg,D,W,W>;
-ST S; ST I:public F<I>{
+ST S;ST I:public F<I>{
 friend F<I>;friend S;W v;
 VC inc(){++v;}LazyT(W,1)VC dec(){--v;}
 LazyT(W,1)void adv(D n){if CEXP(is_unsigned_v<W>)n>=D(0)?v+=W(n):v-=W(-n);else v+=n;}
@@ -866,12 +917,12 @@ S()=default;CEXP explicit S(B b):b(b) {}
 private:B b;
 CEXP BL eq(const I&i)const RET(b==i.v)LazyT(W,sized_s_for<B,W>)CEXP BL dif(const I&i)const RET(b-i.v)
 };
-W v; B b;
+W v;B b;
 public:
 iota_view()=default;
 CEXP explicit iota_view(W v):v(v) {}
 CEXP iota_view(ty_id_t<W>v,ty_id_t<B>b):v(v),b(b) {}
-CEXP I begin() const { return I{v}; }
+CEXP I begin() const { return I{v};}
 AC end() const {
 if CEXP(is_same_v<W,B>) return I{b};
 else if CEXP(is_same_v<B,unr_t>) return unr;
@@ -888,7 +939,7 @@ Def_Vw_Adp(iota)
 TP<BL C,CL T>using maybe_const=conditional_t<C,const T,T>;
 //[range.ref.view]
 TpReq(CL R)(range<R>&&is_object_v<R>)CL ref_view:public view_interface<ref_view<R>>{
-ST ref_req_concept{static void FUN(R&); static void FUN(R&&)=delete;TP<CL T>auto freq()->DCLT(FUN(DCLV(T)));};
+ST ref_req_concept{static void FUN(R&);static void FUN(R&&)=delete;TP<CL T>auto freq()->DCLT(FUN(DCLV(T)));};
 R*r;
 public:TpReq(CL T)(different_from<T,ref_view>&&conv_to<T,R&>&&CpRef(ref_req,T))
 CEXP ref_view(T&&t):r(&(R&)(FWD(t))){}
@@ -956,7 +1007,7 @@ Def()BL eq(const I<CC>&i)const RET(s_==i.i_)Def(sized_)D dif(const I<CC>&i)const
 public:AC base()RET(s_)
 S()=default;CEXP S(Ty s):s_(move(s)){}LazyT(V,C&&conv_to<s_t<V>,Ty>)CEXP S(S<!C>s):s_(move(s.s_)){}
 };
-V v_=V();copyable_box<F>f_;
+V v_=V();box<F>f_;
 public:
 CEXP transform_view(V v,F f):v_(move(v)),f_(move(f)) {}
 CEXP V base()const RET(v_)
@@ -976,14 +1027,14 @@ Def_Vw_Adp(transform)
 IC ST search_fn {
 TP<CL I,CL S,CL J,CL T,CL Pr,CL P,CL Q>subrange<I>static impl(I a,S b,J x,T y,Pr pr,P p,Q q){
 for (;;++a) {I i=a;
-for(J j=x;;++i,++j){if(j==y)RET({a, i})if(i==b)RET({i,i})if(!invoke(pr,invoke(p,*i),invoke(q,*j)))break;}
+for(J j=x;;++i,++j){if(j==y)RET({a,i})if(i==b)RET({i,i})if(!invoke(pr,invoke(p,*i),invoke(q,*j)))break;}
 }
 }
-TpReq(CL R,CL S,CL Pr=equal_to<>,CL P=identity,CL Q=identity)(fw_rg<R>&&fw_rg<S>&&ind_cmp<i_t<R>,i_t<S>,Pr,P,Q>)
+TpReq(CL R,CL S,CL Pr=equal_to,CL P=idt,CL Q=idt)(fw_rg<R>&&fw_rg<S>&&ind_cmp<i_t<R>,i_t<S>,Pr,P,Q>)
 AC operator()(R&&r,S&&s,Pr pr={},P p={},Q q={})const RET(impl(ALL(r),ALL(s),ref(pr),ref(p),ref(q)))
 }search;
 //[range.split.view]
-TpReq(CL V,CL P)(fw_rg<V>&&view<V>&&fw_rg<P>&&view<P>&&ind_cmp<i_t<V>,i_t<P>,equal_to<>>)
+TpReq(CL V,CL P)(fw_rg<V>&&view<V>&&fw_rg<P>&&view<P>&&ind_cmp<i_t<V>,i_t<P>,equal_to>)
 CL split_view:public view_interface<split_view<V,P>>{
 V v_;P p_;
 using VI=i_t<V>;using R=subrange<VI>;
@@ -1001,8 +1052,8 @@ public:CEXP split_view(V v,P p):v_(move(v)),p_(move(p)){}CEXP split_view(V v,RV 
 CEXP I begin()RET({*this,Rg begin(v_),Nx(Rg begin(v_))})
 AC end(){if CEXP(cm_rg<V>)RET(I{*this,Rg end(v_),{}})else RET(df)}
 };
-TP<CL R,CL P>split_view(R&&,P&&)->split_view<Vw all_t<R>, Vw all_t<P>>;
-TP<CL R>split_view(R&&,RV)->split_view<Vw all_t<R>, single_view<RV>>;
+TP<CL R,CL P>split_view(R&&,P&&)->split_view<Vw all_t<R>,Vw all_t<P>>;
+TP<CL R>split_view(R&&,RV)->split_view<Vw all_t<R>,single_view<RV>>;
 Def_Vw_Adp(split)
 #undef RV
 //[range.reverse.view]
@@ -1012,31 +1063,23 @@ TP<BL X=1>using RI=enable_if_t<X,reverse_iterator<i_t<V>>>;
 TP<CL T>using RS=enable_if_t<sz_rg<T>,rd_t<T>>;
 public:
 CEXP explicit reverse_view(V v):v_(move(v)){}
-CEXP V base()const& { return v_; }
-TP<CL VV=V>RI<>CEXP begin() { return make_reverse_iterator(Rg next(::begin(v_),::end(v_))); }
+CEXP V base()const& { return v_;}
+TP<CL VV=V>RI<>CEXP begin() { return make_reverse_iterator(Rg next(::begin(v_),::end(v_)));}
 TP<CL VV=V>RI<range<const VV>>CEXP begin() const 
-{ return make_reverse_iterator(Rg next(::begin(v_),::end(v_))); }
-TP<CL VV=V>RI<>CEXP end() { return make_reverse_iterator(::begin(v_)); }
-TP<CL VV=V>RI<range<const VV>>CEXP end() const { return make_reverse_iterator(::begin(v_)); }
-TP<CL VV=V>RS<VV>CEXP size() { return::size(v_); }
-TP<CL VV=V>RS<const VV>CEXP size() const { return::size(v_); }
+{ return make_reverse_iterator(Rg next(::begin(v_),::end(v_)));}
+TP<CL VV=V>RI<>CEXP end() { return make_reverse_iterator(Rg begin(v_));}
+TP<CL VV=V>RI<range<const VV>>CEXP end() const { return make_reverse_iterator(Rg begin(v_));}
+TP<CL VV=V>RS<VV>CEXP size() { return::size(v_);}
+TP<CL VV=V>RS<const VV>CEXP size() const { return::size(v_);}
 private:V v_;
 };
 TP<CL T>reverse_view(T&&)->reverse_view<Vw all_t<T>>;
 Def_Vw_Adp(reverse)//first_of [todo]
-//[alg.find]
-IC ST find_if_fn {
-TP<CL I,CL S,CL Pr,CL P>static CEXP I impl(I f,S l,Pr pr,P p){for(;f!=l;++f)if(invoke(pr,invoke(p,*f)))break;return f;}
-} find_if;
-IC ST find_if_not_fn{
-TpReq(CL R,CL Pr,CL P=identity)(ip_rg<R>) 
-auto COP()(R&&r,Pr pr,P p={})const RET(find_if_fn::impl(begin(r),end(r),not_fn(ref(pr)),ref(p)))
-} find_if_not;
 //[range.take.while]
 TpReq(CL V,CL P)(ip_rg<V>&&is_object_v<P>/*&&indirect_unary_predicate<const P,i_t<V>>*/)
 CL drop_while_view:public view_interface<drop_while_view<V,P>>{
 V v_;
-copyable_box<P>p_;
+box<P>p_;
 public:
 drop_while_view(V v,P p):v_(move(v)),p_(move(p)){}
 AC begin() RET(Rg find_if_not(v_,cref(*p_)))
@@ -1048,7 +1091,7 @@ Def_Vw_Adp(drop_while)
 //[range.view.zip]
 TP<CL...A>using tuple_or_pair=tuple<A...>;
 TP<CL... R>concept czip=(sizeof...(R)==1&&(cm_rg<R>&&...))||(!(bd_rg<R>&&...)&&(cm_rg<R>&&...))||((ra_rg<R>&&sz_rg<R>)&&...);
-TP<CL F,CL Tp>AC tfe_(F&&f,Tp&&tp) { apply([&](auto&&...a){ (invoke(f,FWD(a)),...); },FWD(tp) ); }
+TP<CL F,CL Tp>AC tfe_(F&&f,Tp&&tp) { apply([&](auto&&...a){ (invoke(f,FWD(a)),...);},FWD(tp) );}
 TP<CL F,CL Tp>AC ttf_(F&&f,Tp&&tp) 
 RET(apply([&](auto&&...a)RET(tuple_or_pair<inv_res_t<F&,DCLT(a)>...>(invoke(f,FWD(a))...)),FWD(tp)))
 TP<CL F,CL L,CL R,size_t... i>AC tpt_impl(F&&f,L&&l,R&&r,index_sequence<i...>)
@@ -1084,7 +1127,7 @@ CurLazy(1)void adv(D<C>n){tfe_([n](auto&i){i+=n;},i_);}
 CurLazy((eq_cmp<i_t<MCV>>&&...))BL FC eq Crefp(I){if CEXP(All_(bd))RET(i.i_==j.i_)else
 RET(apply([](auto...b)RET((b||...)),ttf_([](auto&i,auto&j)RET(i==j),i.i_,j.i_)))}
 CurLazy(1)BL FC lt Crefp(I)RET(i.i_<j.i_)
-CurLazy(1)D<C>FC dif Crefp(I)RET(apply([](auto... b) RET(min({(D<C>)b...},{},abs)),ttf_([](auto&i,auto&j)RET(i-j),i.i_,j.i_)))
+CurLazy(1)D<C>FC dif Crefp(I)RET(apply([](auto... b) RET(min(mk_lst({(D<C>)b...}),{},abs)),ttf_([](auto&i,auto&j)RET(i-j),i.i_,j.i_)))
 #undef All_
 };
 TP<BL C>ST S:SF<S<C>>{
@@ -1094,7 +1137,7 @@ private:TMCV(s_t)s_;
 #define Def(Name) TpReq(BL CC)((Name##s_for<s_t<MCV>,i_t<maybe_const<CC,V>>>&&...))CEXP
 Def()BL eq(const I<CC>&i)const RET(apply([](auto...b) RET((b||...)),ttf_([](auto&i,auto&j)RET(i==j),i.i_,s_)))
 Def(sized_)auto dif(const I<CC>&i)const
-RET(apply([](auto...b)RET(Rg min({(id_t<I<CC>>)b...},{},Rg abs)),ttf_([](auto&i,auto&j)RET(i-j),s_,i.i_)))
+RET(apply([](auto...b)RET(Rg min(mk_lst({(id_t<I<CC>>)b...}),{},Rg abs)),ttf_([](auto&i,auto&j)RET(i-j),s_,i.i_)))
 #undef Def
 };
 #undef TMCV
@@ -1114,27 +1157,17 @@ else if CEXP((ra_rg<const V>&&...)) return begin() + size();
 else return I<0>(ttf_(Rg end,v_));
 }
 CurLazy((sz_rg<V>&&...)) AC size()
-RET(apply([](auto...a)RET(Rg min({(make_unsigned_t<common_type_t<DCLT(a)...>>)a...})),ttf_(Rg size,v_)))
+RET(apply([](auto...a)RET(Rg min(mk_lst({(make_unsigned_t<common_type_t<DCLT(a)...>>)a...}))),ttf_(Rg size,v_)))
 CurLazy((sz_rg<const V>&&...)) AC size() const
-RET(apply([](auto...a)RET(Rg min({(make_unsigned_t<common_type_t<DCLT(a)...>>)a...})),ttf_(Rg size,v_)))
+RET(apply([](auto...a)RET(Rg min(mk_lst({(make_unsigned_t<common_type_t<DCLT(a)...>>)a...}))),ttf_(Rg size,v_)))
 #undef CurLazy
 };
 TP<CL... R>zip_view(R&&...)->zip_view<Vw all_t<R>...>;
 Def_Vw_Adp(zip)
 Def_Vw_Adp_(enumerate,[](auto&&...r)NOEXP_DCLT_RET(zip(iota(size_t{0}),FWD(r)...)))//[todo]:iota(0-size)
-IC ST adjacent_find_fn{
-TP<CL I,CL S,CL Pr,CL P>CEXP static I impl(I f,S l,Pr pr,P p){
-if(f==l)RET(f)auto w=proj_cmp(ref(pr),ref(p));
-for(auto n=next(f);n!=l;++n,++f)if(w(*f,*n))break;return f;
-}
-TpReq(CL R,CL C=equal_to<>,CL P=identity)(fw_rg<R>&&ind_bp<C,projected<i_t<R>,P>>)
-auto COP()(R&&r,C c={},P p={})const RET(impl(ALL(r),ref(c),ref(p)))
-TpReq(CL I,CL S,CL C=equal_to<>,CL P=identity)(fw_i<I>&&s_for<S,I>&&ind_bp<C,projected<I,P>>)
-auto COP()(I f,S l,C c={},P p={})const RET(impl(move(f),move(l),ref(c),ref(p)))
-} adjacent_find;
 //[views.chunk_by]
 TpReq(CL V,CL P)(fw_rg<V>&&is_object_v<P>&&ind_bp<P,i_t<V>,i_t<V>>)CL chunk_by_view:public view_interface<chunk_by_view<V,P>>{
-V v_;copyable_box<P>p_;
+V v_;box<P>p_;
 using VI=i_t<V>;
 CEXP VI Nx(VI i)RET(Rg next(Rg adjacent_find(i,Rg end(v_),not_fn(ref(*p_))),1,Rg end(v_)))
 LazyT(V,1)CEXP VI Pv(VI i)RET(Rg prev(Rg adjacent_find(reverse_view(subrange(Rg begin(v_),i)),not_fn(flip(ref(*p_))).base(),1,Rg begin(v_))))
@@ -1245,8 +1278,8 @@ TP<CL S,CL D>CEXP S&put_delim(S&s,BL f,D d){if(!f)s<<d.d<<' ';return s;}
 CpDef(has_del,CL T)(T t)(t.d,);TP<CL T>concept has_del=CpRef(has_del,T);
 CpDef(has_bra,CL T)(T t)(t.b,);TP<CL T>concept has_bra=CpRef(has_bra,T);
 //decl
-TP<CL S>void impl(S&, const string&,tag<6>)=delete;
-TP<CL S, size_t N>void impl(S&, const char(&)[N], tag<6>)=delete;
+TP<CL S>void impl(S&,const string&,tag<6>)=delete;
+TP<CL S,size_t N>void impl(S&,const char(&)[N],tag<6>)=delete;
 TP<CL S,TPP W,CL R,CL...Re,CL=Req(Rg range<R>),CL=void_t<TY W<R,Re...>::fmt>>void impl(S&s,W<R,Re...>,tag<3>);
 TP<CL S,TPP W,CL T,CL...Re,CL=TY tuple_size<rmv_cvr_t<T>>::type,CL=void_t<TY W<T,Re...>::fmt>>
 void impl(S&,W<T,Re...>w,tag<2>);
@@ -1258,7 +1291,7 @@ TP<CL Ch,CL Tr,CL T>auto operator<<(basic_ostream<Ch,Tr>&s,T&&t)DCLT_RET(impl(s,
 #define DEF auto d=[&]{if CEXP(has_del<WW>)return w.d;else return default_delim;};auto b=[&]{if CEXP(has_bra<WW>)return w.b;else return default_brac;};
 #define MSeq make_index_sequence<tuple_size_v<rmv_cvr_t<T>>>{}
 TP<CL S,CL T,CL B,CL D,size_t... I>
-void T_impl(S&s,T&&t,index_sequence<I...>,B b,D d){Raii _{s,b};((put_delim(s,I==0,d)<<fmt(get<I>(t))),...);  }
+void T_impl(S&s,T&&t,index_sequence<I...>,B b,D d){Raii _{s,b};((put_delim(s,I==0,d)<<fmt(get<I>(t))),...);}
 TP<CL S,CL R,CL B,CL D>void R_impl(S&&s,R&&r,B b,D d){Raii _{s,b};size_t i=0;for(auto&&e:r)put_delim(s,++i==1,d)<<fmt(e);}
 TP<CL S,TPP W,CL R,CL...Re,CL,CL>void impl(S&s,W<R,Re...> w,tag<3>){using WW=W<R,Re...>;DEF R_impl(s,w.o,b(),d());}
 TP<CL S,TPP W,CL T,CL...Re,CL,CL>void impl(S&s,W<T,Re...>w,tag<2>){using WW=W<T,Re...>;DEF T_impl(s,w.o,MSeq,b(),d());}
@@ -1275,7 +1308,7 @@ TP<CL... T>using limits=numeric_limits<common_type_t<T...>>;
 TP<CL TT,CL UU>IC BL eq(TT&&t,UU&&u){DEF
 if CEXP(is_integral_v<T>&&is_integral_v<U>)
 {if CEXP(is_signed_v<T> ==is_signed_v<U>)RET(t==u)else if CEXP(is_signed_v<T>)RET(t<0?0:to_unsigned(t)==u)else RET(u<0?0:t==to_unsigned(u))}
-else if CEXP(is_floating_point_v<U>||is_floating_point_v<T>){auto x=abs(t-u); return x<=limits<T,U>::epsilon()*ulp || x<limits<T,U>::min();}
+else if CEXP(is_floating_point_v<U>||is_floating_point_v<T>){auto x=abs(t-u);return x<=limits<T,U>::epsilon()*ulp || x<limits<T,U>::min();}
 else RET(t==u)
 }
 TP<CL TT,CL UU>IC BL lt(TT&&t,UU&&u){DEF
@@ -1288,11 +1321,11 @@ else return t<u;
 TP<CL T>CL sf { 
 T v={};
 public:
-sf()=default; TP<CL U>CEXP sf(U&&x):v(FWD(x)) {}
-COP T() const { return v; }
+sf()=default;TP<CL U>CEXP sf(U&&x):v(FWD(x)) {}
+COP T() const { return v;}
 };
-TP<CL T>sf(T)->sf<T>; inline sf<ull>COP ""_sf(ull x) { return x; }
-inline sf<long double>COP ""_sf(long double x) { return x; }
+TP<CL T>sf(T)->sf<T>;inline sf<ull>COP ""_sf(ull x) { return x;}
+inline sf<long double>COP ""_sf(long double x) { return x;}
 
 #define DefP(OP,Proxy) \
 TP<CL L,CL R>BL COP OP(sf<L>const& l,sf<R>const& r) RET(Proxy(L(l),R(r))) \
@@ -1343,9 +1376,9 @@ public:
 UF(size_t n):n(n),comp_cnt(n),fa(n),sz(n,1) {
 iota(begin(fa),end(fa),0);
 }
-auto size() { return n; }
-auto count() { return comp_cnt; }
-int findset(int x) { return fa[x]==x ? x:fa[x]=findset(fa[x]); }
+auto size() { return n;}
+auto count() { return comp_cnt;}
+int findset(int x) { return fa[x]==x ? x:fa[x]=findset(fa[x]);}
 void unite(int x,int y) {
 if (sz[x]<sz[y]) swap(x,y);
 fa[y]=x;
@@ -1361,25 +1394,20 @@ return x0!=y0;
 }
 inline NP utility {
 CpDef(can_top,CL T)(T& t)(t.top(),);
-AC pop=[](auto& t) {
+AC pop=[](auto&t){
 using T=decay_t<DCLT(t)>;auto r=move((TY T::value_type&)[&]()->auto&&{if CEXP(CpRef(can_top,T))RET(t.top())else RET(t.front())}());
 t.pop();return r;
 };
 }//utility
-inline NP direction {
+inline NP direction{
 CEXP int dir [][2]{{0,1},{1,0},{0,-1},{-1,0}};
-CEXP int dir8[][2]{ {0,1},{1,0},{0,-1},{-1,0},{1,1},{-1,1},{1,-1},{-1,-1}};
+CEXP int dir8[][2]{{0,1},{1,0},{0,-1},{-1,0},{1,1},{-1,1},{1,-1},{-1,-1}};
 AC valid=[](auto m,auto n)RET([=](size_t x,size_t y)RET(x<m&&y<n));
 }
 #ifdef __cpp_lib_memory_resource
-IC auto set_pmr=[] {
-static byte buffer [1 << 30];
-static auto pool=pmr::monotonic_buffer_resource { data(buffer),size(buffer) };
-set_default_resource(&pool);
-return 0;
-};
+IC auto set_pmr=[]{static byte buf[1<<30];static auto pool=pmr::monotonic_buffer_resource{data(buf),size(buf)};set_default_resource(&pool);RET(0)};
 #endif
-IC auto set_fast_io=[]{ios::sync_with_stdio(0); cin.tie(0); cout.tie(0); cout << setprecision(12); return 0;};
+IC auto set_fast_io=[]{ios::sync_with_stdio(0);cin.tie(0);cout.tie(0);cout << setprecision(12);return 0;};
 }//my
 TP<CL...A>VC swap(const tuple<A...>&i,const tuple<A...>&j){Rg tfe_(Rg swap,i,j);}
 TP<CL>concept is_vv=0;TP<CL T>concept is_vv<vector<T>> =1;
@@ -1389,8 +1417,10 @@ TpReq(size_t I,CL T)(is_vv<rmv_cvr_t<T>>)DCLT(auto)get(T&&t)RET(FWD(t)[I])
 }//std
 inline NP simplify {
 NP views=Rg views;using Rg to;using Rg subrange;using Rg fold;
-CPO fac=Vw decompose; CPO subset=Vw subset;
-CPO range=Vw iota; CPO zip=Vw zip; CPO enu=Vw enumerate; CPO split=Vw split;
-CPO rev=Vw reverse; CPO tran=Vw transform;CPO single=Vw single;CPO chunk_by=Vw chunk_by;
-CPO Min=Rg min;CPO Size=Rg size;
+CPO fac=Vw decompose;CPO subset=Vw subset;
+CPO range=Vw iota;CPO zip=Vw zip;CPO enu=Vw enumerate;CPO split=Vw split;
+CPO rev=Vw reverse;CPO tran=Vw transform;CPO single=Vw single;CPO chunk_by=Vw chunk_by;
+CPO Min=Rg min;CPO Max=Rg max;CPO Size=Rg size;CPO Empty=Rg empty;CPO Begin=Rg begin;CPO End=Rg end;
+TP<CL...>ST error;
+#define TYPE(...) error<decltype(__VA_ARGS__)> _;
 }//simplify
