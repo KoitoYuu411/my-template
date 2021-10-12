@@ -891,27 +891,19 @@ TpReq(CL I,CL S)(s_for<S,I>)subrange(I,S)->subrange<I,S>;
 TpReq(CL I,CL S)(s_for<S,I>)subrange(I,S,make_unsigned_t<id_t<I>>)->subrange<I,S,subrange_kind::sized>;
 TpReq(CL R)(borrowed_rg<R>)subrange(R&&)->subrange<i_t<R>,s_t<R>,
 (sz_rg<R>|| sized_s_for<i_t<R>,s_t<R>>)?subrange_kind::sized:subrange_kind::unsized>;
-TpReq(CL R)(borrowed_rg<R>)subrange(R&&,make_signed_t<rd_t<R>>)
-->subrange<i_t<R>,s_t<R>,subrange_kind::sized>;
-#define Head CL I,CL S,Rg subrange_kind K
-#define Name Rg subrange<I,S,K>
-#define Body {if CEXP(N==0)RET(r.begin())else RET(r.end())}
-// TP<size_t N,Head>AC get(const Name&r)Body TP<size_t N,Head>AC get(Name&&r)Body
+TpReq(CL R)(borrowed_rg<R>)subrange(R&&,make_signed_t<rd_t<R>>)->subrange<i_t<R>,s_t<R>,subrange_kind::sized>;
 }//ranges
 }//my
-TP<Head>ST tuple_size<Name>:integral_constant<size_t,2>{};
-TP<Head>ST tuple_element<0,Name>:ty_id<I>{};TP<Head>ST tuple_element<0,const Name>:ty_id<I>{};
-TP<Head>ST tuple_element<1,Name>:ty_id<S>{};TP<Head>ST tuple_element<1,const Name>:ty_id<S>{};
-// using my::Rg get;
-#undef Head
-#undef Name
-#undef Body
-//[todo?]
-
+#define Tps(Tmp,...)\
+TP<Tmp>ST tuple_size<Rg __VA_ARGS__>:integral_constant<size_t,2>{};\
+TP<Tmp>ST tuple_element<0,Rg __VA_ARGS__>:ty_id<Rg i_t<Rg __VA_ARGS__>>{};\
+TP<Tmp>ST tuple_element<0,const Rg __VA_ARGS__>:ty_id<Rg i_t<const Rg __VA_ARGS__>>{};\
+TP<Tmp>ST tuple_element<1,Rg __VA_ARGS__>:ty_id<Rg s_t<Rg __VA_ARGS__>>{};\
+TP<Tmp>ST tuple_element<1,const Rg __VA_ARGS__>:ty_id<Rg s_t<const Rg __VA_ARGS__>>{};
+Tps(Pack(CL I,CL S,Rg subrange_kind K),subrange<I,S,K>)
 inline NP my{
 CpDef(ind_sw,CL I,CL J)(I&i,J&j)(Rg iter_swap(i,j),Rg iter_swap(j,i),Rg iter_swap(i,i),Rg iter_swap(j,j),);
 TP<CL I,CL J=I>concept ind_sw=ind_rd<I>&&ind_rd<J>&&CpRef(ind_sw,I,J);
-
 #define F Rg IF<counted_iterator<I>,iter_concept<I>,id_t<I>,iv_t<I>,ir_t<I>>
 TpReq(CL I)(io_i<I>)ST counted_iterator:F{
 counted_iterator()=default;CEXP counted_iterator(I i,id_t<I>n):b_(i),n_(n){}
@@ -1634,12 +1626,6 @@ TP<CL>concept is_vv=0;TP<CL T>concept is_vv<vector<T>> =1;
 TP<CL T>ST tuple_size<vector<T>>:integral_constant<size_t,vector_size_v>{};
 TP<size_t I,CL T>ST tuple_element<I,vector<T>>:enable_if<1,T>{};
 TpReq(size_t I,CL T)(is_vv<rmv_cvr_t<T>>)DCLT(auto)get(T&&t)RET(FWD(t)[I])
-#define Tps(Tmp,...)\
-TP<Tmp>ST tuple_size<Rg __VA_ARGS__>:integral_constant<size_t,2>{};\
-TP<Tmp>ST tuple_element<0,Rg __VA_ARGS__>:ty_id<Rg i_t<Rg __VA_ARGS__>>{};\
-TP<Tmp>ST tuple_element<0,const Rg __VA_ARGS__>:ty_id<Rg i_t<const Rg __VA_ARGS__>>{};\
-TP<Tmp>ST tuple_element<1,Rg __VA_ARGS__>:ty_id<Rg s_t<Rg __VA_ARGS__>>{};\
-TP<Tmp>ST tuple_element<1,const Rg __VA_ARGS__>:ty_id<Rg s_t<const Rg __VA_ARGS__>>{};
 #define Tps1(Xarg) Tps(CL R,Xarg##_view<R>)
 #define Tps2(Xarg) Tps(Pack(CL X,CL Y),Xarg##_view<X,Y>)
 Tps1(ref)Tps1(take)Tps1(drop)Tps1(join)Tps1(reverse)
