@@ -223,8 +223,8 @@ AC impl(F&&f,A&&...a)NOEXP_DCLT_RET(FWD(f)(FWD(a)...))
 ST fn { TP<CL F,CL...A>auto COP()(F&&f,A&&...a)const NOEXP_DCLT_RET(impl(FWD(f),FWD(a)...)) };
 }//invoke_
 In_Rgs(In_cpo(IC invoke_::fn invoke;))
-template<class T>lst<T>mk_lst(lst<T> i)NOEXP_RET(i)
-TP<CL Void,CL,CL...>ST Hinv_res{};
+TP<CL T>lst<T>mk_lst(lst<T> i)NOEXP_RET(i)
+TP<CL,CL,CL...>ST Hinv_res{};
 TP<CL F,CL...A>ST Hinv_res<void_t<DCLT(Rg invoke(DCLV(F),DCLV(A)...))>,F,A...>{
 using type=DCLT(Rg invoke(DCLV(F),DCLV(A)...));
 };
@@ -467,7 +467,7 @@ RET(tp_pa<DCLT(invoke(FWD(f),get<i>(FWD(l)),get<i>(FWD(r))))...>(invoke(FWD(f),g
 TP<CL F,CL L,CL R,size_t...i>VC f_impl(F&&f,L&&l,R&&r,Seq<i...>)RET((invoke(FWD(f),get<i>(FWD(l)),get<i>(FWD(r))),...))
 TP<CL T,CL O,CL P,size_t...x>size_t CEXP fd_impl(T&&t,size_t i,size_t j,O o,P p,Seq<x...>){
 size_t s=0;bool y=0;
-(void(i<=x&&x<j?y?s=Rg invoke(o,s,invoke(p,get<x>(FWD(t)))):s=invoke(p,get<x>(FWD(t))):s),...);
+(void(i<=x&&x<j?y?s=Rg invoke(o,s,invoke(p,get<x>(FWD(t)))):(y=1,s=invoke(p,get<x>(FWD(t)))):s),...);
 return s;
 }
 
@@ -1724,12 +1724,11 @@ TP<CL>concept is_vv=0;TP<CL T>concept is_vv<vector<T>> =1;
 TP<CL T>ST tuple_size<vector<T>>:integral_constant<size_t,vector_size_v>{};
 TP<size_t I,CL T>ST tuple_element<I,vector<T>>:enable_if<1,T>{};
 TpReq(size_t I,CL T)(is_vv<rmv_cvr_t<T>>)DCLT(auto)get(T&&t)RET(FWD(t)[I])
-#define Tps1(Xarg) Tps(CL R,Xarg##_view<R>)
-#define Tps2(Xarg) Tps(Pack(CL X,CL Y),Xarg##_view<X,Y>)
-Tps1(ref)Tps1(take)Tps1(drop)Tps1(join)Tps1(reverse)
-Tps2(filter)Tps2(transform)Tps2(take_while)Tps2(drop_while)Tps2(split)
-#undef Tps1
-#undef Tps2
+#define Tpsn(Xarg) Tps(Pack(CL...A),Xarg##_view<A...>)
+Tpsn(ref)Tpsn(take)Tpsn(drop)Tpsn(join)Tpsn(reverse)
+Tpsn(filter)Tpsn(transform)Tpsn(take_while)Tpsn(drop_while)Tpsn(split)
+Tpsn(concat)Tpsn(zip)
+#undef Tpsn
 #undef Tps
 NP views=Rg views;
 using Vw single,Vw filter,Vw take,Vw take_while,Vw drop,Vw drop_while,Vw join,Vw split,Vw elements,Vw keys,Vw values;
