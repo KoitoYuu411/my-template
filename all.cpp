@@ -372,11 +372,19 @@ TP<CL T>concept regular=semiregular<T>&&eq_cmp<T>;
 CpBl(predicate,CL F,CL...A)(invocable<F,A...>&&boolean_testable<inv_res_t<F,A...>>);
 TP<CL F,CL...A>concept predicate=CpRef(predicate,F,A...);
 TP<CL R,CL T,CL U>concept relation=predicate<R,T,T>&&predicate<R,U,U>&&predicate<R,T,U>&&predicate<R,U,T>;
-CpDef(tplk,CL T)()(RetReq(same_as,size_t)(tuple_size_v<T>));//[todo]more
-TP<CL T>concept tuple_like=CpRef(tplk,T);
-//[traits]
 
-
+//[func-tools]
+TP<CL,TPP=map>ST Hmemo{};
+TP<TPP M,CL R,CL...A>ST Hmemo<R(A...),M>{
+TP<CL F>ST fn{
+fn(fn&&)=default;fn(F f):f(move(f)){}using T=tuple<decay_t<A>...>;mutable M<T,R> m;F f;
+TP<CL...S>R const&operator()(S&&...s)const{
+T t{s...};auto i=m.find(t);if(i==m.end())i=m.emplace((T&&)t,invoke(f,ref(*this),(S&&)s...)).first;RET(i->second)
+}
+};
+TP<CL F>fn(F)->fn<F>;
+};
+#define memo(...) Hmemo<__VA_ARGS__>::fn
 TP<CL F>ST Yc{
 F f;TP<CL L>Yc(L&&l):f(FWD(l)){}
 TP<CL...A>auto COP()(A&&...a)const NOEXP_DCLT_RET(f(*this,(A&&)a...))
@@ -1408,7 +1416,6 @@ TP<CL...R>using Tg=cd_t<((ra_rg<R>&&sz_rg<R>)&&...),ra_tag,cd_t<((bd_rg<R>&&cm_r
 #define RT cm_ref_t<rr_t<B>...>
 #define F IF<I<C>,Tg<B...>,D,VT,RT>
 TP<BL C>CL I:public F{friend F;
-
 TP<size_t N,CL T>SAC toI(T t)RET(Vi<N,T>{{},move(t)})
 using P=maybe_const<C,concat_view>;
 TP<size_t...i>SAC Va(Seq<i...>)->variant<Vi<i,i_t<maybe_const<C,V>>>...>;
@@ -1419,11 +1426,8 @@ AC NxBegin(){visit([&](auto&i){K if CEXP(k+1<n)i_.TP emplace<k+1>(toI<k+1>(Begin
 AC PrEnd(){visit([&](auto&i){K if CEXP(!!k)i_.TP emplace<k-1>(toI<k-1>(p_->TP IEnd<k-1>()));},i_);}
 AC DToBegin()const RET(visit([&](auto&i){K RET(D(i.i-Begin(get<k>(p_->v_))))},i_))
 AC DToEnd()const RET(visit([&](auto&i){K RET(D(p_->TP IEnd<k>()-i.i))},i_))
-VC inc(){
-visit([](auto&i){++i.i;},i_);
-auto f=[&](auto&i){K if CEXP(k==n-1)RET(false)else RET(i.i==End(get<k>(p_->v_)))};
-while(visit(f,i_))NxBegin();
-}
+VC sat(){auto f=[&](auto&i){K if CEXP(k==n-1)RET(false)else RET(i.i==End(get<k>(p_->v_)))};while(visit(f,i_))NxBegin();}
+VC inc(){visit([](auto&i){++i.i;},i_);sat();}
 LazyV(C,1)VC dec(){
 auto f=[&](auto&i){K if CEXP(!k)RET(false)else RET(i.i==Begin(get<k>(p_->v_)))};
 while(visit(f,i_))PrEnd();
@@ -1454,7 +1458,7 @@ else RET(f(j,i))
 }
 LazyT(I_,eq_cmp<I_>)FC BL eq Crefp(I) RET(i.i_==j.i_)LazyV(C,1)FC BL lt Crefp(I) RET(i.i_<j.i_)
 BL rte()const RET(i_.index()==n-1&&get<n-1>(i_).i==End(get<n-1>(p_->v_)))
-public:I()=default;CEXP I(P&p):p_(&p),i_(in_place_index<0>,toI<0>(Begin(get<0>(p.v_)))){}
+public:I()=default;CEXP I(P&p):p_(&p),i_(in_place_index<0>,toI<0>(Begin(get<0>(p.v_)))){sat();}
 CEXP I(P&p,df_t):p_(&p),i_(in_place_index<n-1>,toI<n-1>(p.TP IEnd<n-1>())){}
 RT COP*()const RET(visit([](auto&i)DCLT_RET(RT(*i.i)),i_))
 #undef J
@@ -1472,7 +1476,7 @@ LazyV(n,(range<const V>&&...))AC end()const {if CEXP(ccat<V...>)RET(I<1>{*this,d
 #undef K
 };
 TP<CL...R>concat_view(R&&...)->concat_view<Vw all_t<R&&>...>;
-Def_Vw_Adp(concat)
+NP views{IC ST concat_fn{TpReq(CL...R)((view<Vw all_t<R>>&&...))AC operator()(R&&...r)const DCLT_RET(concat_view{FWD(r)...});}concat;}
 //[views.chunk_by]
 TpReq(CL V,CL P)(fw_rg<V>&&is_object_v<P>&&ind_bp<P,i_t<V>,i_t<V>>)CL chunk_by_view:public VF<chunk_by_view<V,P>>{
 V b_;box<P>p_;using VI=i_t<V>;friend VF<chunk_by_view<V,P>>;
@@ -1587,6 +1591,7 @@ inline constexpr raco slide = [](auto&&r,size_t len) {
     return Vw iota(f,max(f,l-len+1))|views::transform([=](auto i)RET(i|views::counted(len)));
 };
 }//ranges
+TP<CL L,CL R>AC operator+(L&&l,R&&r)DCLT_RET(Rg Vw concat(FWD(l),FWD(r)))
 NP print {
 TP<CL T>ST brac{T l,r;};TP<CL T>brac(T,T)->brac<T>;TP<CL T>ST delim{T d;};TP<CL T>delim(T)->delim<T>;
 TP<CL O,CL B>ST ob_br{using fmt=void;O&o;B b;};TP<CL O,CL D>ST ob_de{using fmt=void;O&o;D d;};
@@ -1747,4 +1752,7 @@ CPO range=Vw iota;CPO All=Vw all;CPO fac=Vw decompose;CPO Enum=Vw enumerate;CPO 
 using Vw subset,Vw chunk_by,Vw zip,Rg counter,Rg to,Rg subrange,Rg fold,Vw combination,Vw concat,Vw adjacent;
 TP<size_t N>IC auto First=views::adjacent<N>^[](auto&&r)DCLT_RET(r.front());
 TP<size_t N>IC auto RFirst=views::transform(First<N>);
+TP<size_t N>IC auto flat_map=[](auto&&f)RET(views::transform(FWD(f))^views::join);
+#define L(...) [&](auto&&_)RET(__VA_ARGS__)
+#define L2(...) [&](auto&&_1,auto&&_2)RET(__VA_ARGS__)
 }
