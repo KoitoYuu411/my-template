@@ -80,13 +80,9 @@ NP std {
 #define CpRef(NAME,...) requires_<NAME##_concept,__VA_ARGS__>
 
 #define RET_THIS(...) { __VA_ARGS__ return*this;}
-
 #define Crefp(T)(const T&i,const T&j)
-
 #define TypeInner(In,...) TY rmv_cvr_t<__VA_ARGS__>::In
-
 #define Pack(...) __VA_ARGS__
-
 
 //[requires_]
 TP<CL,CL...>auto _req_impl(...)->false_type;TP<CL R,CL...A,CL=DCLT(&R::TP freq<A...>)>auto _req_impl(int)->true_type;
@@ -1168,8 +1164,8 @@ TpReq(CL V)(view<V>)CL drop_view:public VF<drop_view<V>>{
 using D=rd_t<V>;V b_;D n_;c_box<i_t<V>>c_;friend VF<drop_view<V>>;
 public:drop_view(V v,D n):b_(move(v)),n_(n){}
 AC begin(){if(!c_)c_=Rg next(Begin(b_),n_,End(b_));RET(*c_)}AC end()RET(End(b_))
-LazyT(V,sz_rg<const V>)rs_t<V> size()const RET(::max<rs_t<const V>>(Size(b_)-(rs_t<const V>)n_,0))
-LazyT(V,sz_rg<V>)rs_t<V> size() RET(::max<rs_t<V>>(Size(b_)-(rs_t<V>)n_,0))
+LazyT(V,sz_rg<const V>)auto size()const RET(::max<rs_t<const V>>(Size(b_)-(rs_t<const V>)n_,0))
+LazyT(V,sz_rg<V>)auto size() RET(::max<rs_t<V>>(Size(b_)-(rs_t<V>)n_,0))
 };
 TP<CL R>drop_view(R&&,rd_t<R>)->drop_view<Vw all_t<R>>;
 Def_Vw_Adp(drop)
@@ -1220,7 +1216,7 @@ AC end(){if CEXP(cjoin<V>)RET(I<sp_vw<V>>{*this,End(b_)})else RET(S<sp_vw<V>>{*t
 LazyT(V,cst)AC end()const{if CEXP(cjoin<const V>)RET(I<1>{*this,End(b_)})else RET(S<1>{*this})}
 };
 TP<CL R>join_view(R&&)->join_view<Vw all_t<R>>;
-NP views {IC ST join_fn{TP<CL R>auto COP()(R&&r)NOEXP_DCLT_RET(join_view<Vw all_t<R&&>>(FWD(r)))} join;}
+NP views {IC ST join_fn{TP<CL R>auto COP()(R&&r)const NOEXP_DCLT_RET(join_view<Vw all_t<R>>(FWD(r)))} join;}
 IC ST search_fn {
 TP<CL I,CL S,CL J,CL T,CL Pr,CL P,CL Q>subrange<I>static impl(I a,S b,J x,T y,Pr pr,P p,Q q){
 for (;;++a) {I i=a;
@@ -1258,7 +1254,9 @@ In_Vws(IC raco counted=[](auto i,id_t<DCLT(i)>k){if CEXP(ra_i<decltype(i)>)RET(s
 TpReq(CL V)(view<V>&&bd_rg<V>)
 CL reverse_view:public VF<reverse_view<V>>{
 friend VF<reverse_view<V>>;V b_;c_box<i_t<V>>c_;
-public:CEXP explicit reverse_view(V v):b_(move(v)){}LazyT(V,sz_rg<V>)AC size()RET(Size(b_))
+public:CEXP explicit reverse_view(V v):b_(move(v)){}
+LazyT(V,sz_rg<V>)AC size()RET(Size(b_))
+LazyT(V,sz_rg<const V>)AC size()const RET(Size(b_))
 AC begin(){if(!c_)c_=Rg next(Begin(b_),End(b_));RET(reverse_iterator(*c_))}AC end()RET(reverse_iterator(Begin(b_)))
 };
 TP<CL T>reverse_view(T&&)->reverse_view<Vw all_t<T>>;
@@ -1390,14 +1388,17 @@ Def(s_for,BL,eq,==)Def(sz_s_for,rd_t<B>,dif,-)
 #undef B
 V b_;
 public:adjacent_view(V v):b_(move(v)){}
-LazyT(V,sp_vw<V>)AC begin()RET(I<0>{b_})LazyT(V,range<const V>)AC begin()const RET(I<1>{b_})
-LazyT(V,sp_vw<V>)AC end(){if CEXP(cm_rg<V>)RET(I<0>{df,b_})else RET(S<0>{b_})}
+LazyT(V,!sp_vw<V>)AC begin()RET(I<0>{b_})LazyT(V,range<const V>)AC begin()const RET(I<1>{b_})
+LazyT(V,!sp_vw<V>)AC end(){if CEXP(cm_rg<V>)RET(I<0>{df,b_})else RET(S<0>{b_})}
 LazyT(V,range<const V>)AC end()const{if CEXP(cm_rg<const V>)RET(I<1>{df,b_})else RET(S<1>{b_})}
-#define SZ(FL) LazyT(V,sz_rg<FL V>)auto size() FL {using S=DCLT(Size(b_));using CT=cm_ty_t<S,size_t>;CT r=Size(b_);RET(T(r-::min<CT>(r,N-1)))}
+#define SZ(FL) LazyT(V,sz_rg<FL V>)auto size() FL {using S=DCLT(Size(b_));using CT=cm_ty_t<S,size_t>;CT r=Size(b_);RET(S(r-::min<CT>(r,N-1)))}
 SZ()SZ(const)
 #undef SZ
 };
-In_Vws(TP<size_t N>IC auto adjacent=[](auto&&r)NOEXP_DCLT_RET(adjacent_view<all_t<DCLT(r)>,N>{FWD(r)});)
+NP views{
+TP<size_t N>IC auto adjacent=[](auto&&r)NOEXP_DCLT_RET(adjacent_view<all_t<DCLT(r)>,N>{FWD(r)});
+IC auto pairwise=adjacent<2>;
+}
 TP<size_t N,CL T>ST Vi:integral_constant<size_t,N>{
 #define D(OP) LazyT(T,ReqExpr(DCLV(const t&)OP DCLV(const t&)))BL FCOP OP Crefp(Vi)RET(i.i OP j.i)
 T i;D(==)D(!=)D(<)D(>)D(<=)D(>=)
@@ -1749,10 +1750,12 @@ CPO Min=Rg min;CPO Max=Rg max;
 inline NP simplify{
 CPO tran=Vw transform;
 CPO range=Vw iota;CPO All=Vw all;CPO fac=Vw decompose;CPO Enum=Vw enumerate;CPO rev=Vw reverse;
-using Vw subset,Vw chunk_by,Vw zip,Rg counter,Rg to,Rg subrange,Rg fold,Vw combination,Vw concat,Vw adjacent;
+using Vw subset,Vw chunk_by,Vw zip,Rg counter,Rg to,Rg subrange,Rg fold,Vw combination,Vw concat,Vw adjacent, Vw pairwise;
 TP<size_t N>IC auto First=views::adjacent<N>^[](auto&&r)DCLT_RET(r.front());
 TP<size_t N>IC auto RFirst=views::transform(First<N>);
 TP<size_t N>IC auto flat_map=[](auto&&f)RET(views::transform(FWD(f))^views::join);
+
+IC auto iters=[](auto&&r)RET(range(ALL(r)));
 #define L(...) [&](auto&&_)RET(__VA_ARGS__)
 #define L2(...) [&](auto&&_1,auto&&_2)RET(__VA_ARGS__)
 }
