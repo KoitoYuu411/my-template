@@ -368,12 +368,12 @@ TP<CL R,CL T,CL U>concept relation=predicate<R,T,T>&&predicate<R,U,U>&&predicate
 //lambda
 TP<size_t>deleted_t pack_get()RET({})
 TP<size_t X,CL H,CL...A>DCLT(auto)pack_get(H&&h,A&&...a){if CE(X==0)RET(FWD(h))else RET(pack_get<X-1>(FWD(a)...))}
-#define La(...) (auto&&...a)->DCLT(auto) {\
-auto&&_1=pack_get<0>(FWD(a)...);auto&&_2=pack_get<1>(FWD(a)...);auto&&_3=pack_get<2>(FWD(a)...);auto&&_4=pack_get<3>(FWD(a)...);\
+#define lambda(...) (auto&&...arg)->DCLT(auto) {\
+auto&&_1=pack_get<0>(FWD(arg)...);auto&&_2=pack_get<1>(FWD(arg)...);auto&&_3=pack_get<2>(FWD(arg)...);auto&&_4=pack_get<3>(FWD(arg)...);\
 return __VA_ARGS__;\
 }
 
-#define RLa(...) [&] La(__VA_ARGS__)
+#define Rlambda(...) [&] lambda(__VA_ARGS__)
 TP<CL,TPP=map>ST Hmemo{};
 TP<TPP M,CL R,CL...A>ST Hmemo<R(A...),M>{
 TP<CL F>ST fn{
@@ -384,12 +384,14 @@ T t{s...};auto i=m.find(t);if(i==m.end())i=m.emplace((T&&)t,invoke(f,ref(*this),
 };
 TP<CL F>fn(F)->fn<F>;
 };
-#define memo(...) Hmemo<__VA_ARGS__>::fn
-TP<CL F>ST Yc{
-F f;TP<CL L>Yc(L&&l):f(FWD(l)){}
-TP<CL...A>auto COP()(A&&...a)const NOEXP_DCLT_RET(f(*this,(A&&)a...))
+#define $memo(...) Hmemo<__VA_ARGS__>::fn
+TP<CL F>ST Yc_impl{
+F f;Yc_impl(F f):f(move(f)){}
+TP<CL...A>auto COP()(A&&...a)const NOEXP_DCLT_RET(f(ref(*this),(A&&)a...))
 };
-TP<CL T>Yc(T)->Yc<T>;
+TP<CL T>Yc_impl(T)->Yc_impl<T>;
+IC ST Yc_t{TP<CL F>FAC operator%(Yc_t,F&&f)NOEXP_DCLT_RET(Yc_impl(FWD(f)))}Yc;
+#define $Yc Yc%
 TP<CL F>ST scope_guard{F f;TP<CL L>scope_guard(L&&f):f(FWD(f)){}~scope_guard(){f();}};TP<CL F>scope_guard(F)->scope_guard<F>;
 //[int]
 TP<CL T>CE make_unsigned_t<T>to_unsigned(T t)noexcept RET(t)
@@ -452,8 +454,11 @@ TP<size_t N>IC auto fn=first_of([](auto&&t)NOEXP_DCLT_RET(FWD(t).TP get<N>()),[]
 }
 TP<size_t N> IC auto get=get_::fn<N>;
 }
+IC auto apply=[](auto&&f,auto&&t)NOEXP_DCLT_RET(std::apply(FWD(f),FWD(t)));
 }//ranges
 CPO Begin=Rg begin;CPO End=Rg end;CPO Size=Rg size;CPO Empty=Rg empty;
+IC ST applied_t{TP<CL F>FAC operator%(applied_t,F&&f)NOEXP_DCLT_RET(bindF(ranges::apply,FWD(f)))}applied;
+#define $applied applied%
 NP Tp{
 #define Seq index_sequence
 #define make_Seq make_index_sequence
@@ -468,7 +473,7 @@ size_t s=0;bool y=0;
 return s;
 }
 TP<CL...T>using back=tuple_element_t<sizeof...(T)-1,tuple<T...>>;
-IC raco apply=[](auto&&...a)DCLT_RET(std::apply(FWD(a)...));
+// IC auto apply=[](auto&&...a)DCLT_RET(std::apply(FWD(a)...));
 TP<CL F,CL Tp>AC for_(F&&f,Tp&&tp) { std::apply([&](auto&&...a){ (invoke(f,FWD(a)),...);},FWD(tp) );}
 TP<CL F,CL L,CL R>AC for_(F&&f,L&&l,R&&r)RET(tpf_impl(FWD(f),FWD(l),FWD(r),idxT<L>{}))
 TP<CL F,CL Tp>AC tran(F&&f,Tp&&tp)RET(std::apply([&](auto&&...a)RET(tp_pa<inv_res_t<F&,DCLT(a)>...>(invoke(f,FWD(a))...)),FWD(tp)))
@@ -477,8 +482,8 @@ TP<CL T,CL O,CL P>AC fold(T&&t,size_t i,size_t j,O o,P p)RET(fd_impl(FWD(t),i,j,
 TP<CL T>T HH();
 TP<CL T>CPO Hval=[](auto)->T RET(HH<T>());
 TP<CL X,size_t N>using repeat=decltype(tran(Hval<X>,array<int,N>{}));
-
 }
+
 TP<CL...A>VC swap(const tuple<A...>&i,const tuple<A...>&j){Tp::for_(Rg swap,i,j);}
 ST idt{TP<CL T>DCLT(auto)COP()(T&&t)const RET((T&&)t)};
 TP<CL C=less<>,CL P=idt>ST proj_cmp{
@@ -1433,7 +1438,7 @@ using I_=decltype(Va(Tp::idxT<tuple<V...>>{}));
 I_ i_;P*p_;
 #define K AC k=decay_t<decltype(i)>::value;
 AC NxBegin(){visit([&](auto&i){
-K if CE(k+1==n)i_.TP emplace<k+1>(toI<k+1>(End(get<k>(p_->v_))));
+K if CE(k+1==n)i_.TP emplace<k>(toI<k>(End(get<k>(p_->v_))));
 else i_.TP emplace<k+1>(toI<k+1>(Begin(get<k+1>(p_->v_))));}
 ,i_);}
 AC PrEnd(){visit([&](auto&i){K if CE(!!k)i_.TP emplace<k-1>(toI<k-1>(p_->TP IEnd<k-1>()));},i_);}
@@ -1477,9 +1482,9 @@ RT COP*()const RET(visit([](auto&i)DCLT_RET(RT(*i.i)),i_))
 #undef J
 };
 public:CE concat_view(V...v):v_(move(v)...){}
-LazyV(n,(sp_vw<V>&&...))CE I<0>begin()RET({*this})
+LazyV(n,((!sp_vw<V>)&&...))CE I<0>begin()RET({*this})
 LazyV(n,(range<const V>&&...))CE I<1>begin()const RET({*this})
-LazyV(n,(sp_vw<V>&&...))AC end(){if CE(ccat<V...>)RET(I<0>{*this,df})else RET(df)}
+LazyV(n,((!sp_vw<V>)&&...))AC end(){if CE(ccat<V...>)RET(I<0>{*this,df})else RET(df)}
 LazyV(n,(range<const V>&&...))AC end()const {if CE(ccat<V...>)RET(I<1>{*this,df})else RET(df)}
 #undef B
 #undef D
@@ -1553,10 +1558,7 @@ TP<CL C>concept can_reserve=CpRef(can_reserve,C);
 TP<CL R>using proxy_iter=istream_iterator<rv_t<R>>;
 TP<TPP C,CL R,CL...A>using Cont=DCLT(C(proxy_iter<R>(),proxy_iter<R>(),DCLV(A)...));
 TP<CL C>struct to_{
-SAC get=first_of(
-[](C&c)DCLT_RET(back_inserter(c)),
-[](C&c)DCLT_RET(inserter(c,end(c)))
-);
+SAC get=[](C&c)DCLT_RET(inserter(c,end(c)));
 SAC impl=first_of(
 [](auto&&r,auto&&...a)NOEXP_DCLT_RET(C(FWD(r),FWD(a)...)),
 [](auto&&r,auto&&...a)NOEXP_DCLT_RET(C(begin(r),end(r),FWD(a)...)),
@@ -1765,7 +1767,7 @@ using ListF=ranges::IF<ListIter,ip_tag,ptrdiff_t,int,int&>;
 ST ListIter:ListF{
 using pointer=int*;
 ListIter()=default;ListIter(ListNode*x):i_(x){}
-DCLT(auto) COP*()const RET(i_->val)
+ty_id_t<int&> COP*()const RET(i_->val)
 private:VC inc(){i_=i_->next;}BL rte()const RET(!i_)ListNode* i_;friend ListF;
 };
 IC auto ListRange =[](ListNode* head)RET(Rg subrange{ListIter(head),df});
@@ -1779,5 +1781,5 @@ TP<size_t N>IC auto First=views::adjacent<N>^[](auto&&r)DCLT_RET(r.front());
 TP<size_t N>IC auto RFirst=views::transform(First<N>);
 TP<size_t N>IC raco flat_map=[](auto&&r,auto&&f)RET(views::transform(FWD(r),FWD(f))^views::join);
 IC auto iters=[](auto&&r)RET(range(ALL(r)));
-IC raco ap_tran = [](auto&&r,auto&&f)DCLT_RET(views::transform(FWD(r),Tp::apply[FWD(f)]));
+IC raco ap_tran = [](auto&&r,auto&&f)DCLT_RET(views::transform(FWD(r),$applied FWD(f)));
 }
