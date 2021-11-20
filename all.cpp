@@ -384,7 +384,10 @@ T t{s...};auto i=m.find(t);if(i==m.end())i=m.emplace((T&&)t,invoke(f,ref(*this),
 };
 TP<CL F>fn(F)->fn<F>;
 };
-#define $memo(...) Hmemo<__VA_ARGS__>::fn
+#define memo(...) Hmemo<__VA_ARGS__>::fn
+TP<CL C>ST memo_t{TP<CL F>FAC operator%(memo_t,F&&f)->typename Hmemo<C>::TP fn<decay_t<F>>RET((FWD(f)))
+};
+#define $memo(...) memo_t<__VA_ARGS__>{}%
 TP<CL F>ST Yc_impl{
 F f;Yc_impl(F f):f(move(f)){}
 TP<CL...A>auto COP()(A&&...a)const NOEXP_DCLT_RET(f(ref(*this),(A&&)a...))
